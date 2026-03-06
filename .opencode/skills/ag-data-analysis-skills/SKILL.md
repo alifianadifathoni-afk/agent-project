@@ -210,7 +210,7 @@ All data is **public domain** or **free for research use**.
 
 ## Best Practices
 
-### For Data Download Skills:
+### For Data Download Skills
 
 1. **Always start with field-boundaries**
 2. **Use small counts** (2-10) for testing
@@ -218,14 +218,14 @@ All data is **public domain** or **free for research use**.
 4. **Check file sizes** before committing
 5. **Use GeoJSON** for sharing, GeoParquet for storage
 
-### For EDA Skills:
+### For EDA Skills
 
 1. **Use real libraries** (pandas, matplotlib)
 2. **Start with examples/sample data**
 3. **Save outputs** to organized directories
 4. **Document what you analyze**
 
-### General:
+### General
 
 - **UV for isolation**: Each skill in its own environment
 - **Small test data**: 2 fields is enough for testing
@@ -261,11 +261,11 @@ fields = download_fields(count=2)  # Fewer = faster
 
 ## Resources
 
-- **Source Cooperative**: https://source.coop/fiboa/us-usda-cropland
-- **USDA NASS**: https://www.nass.usda.gov
-- **NASA POWER**: https://power.larc.nasa.gov
-- **USGS Earth Explorer**: https://earthexplorer.usgs.gov
-- **Sentinel Hub**: https://www.sentinel-hub.com
+- **Source Cooperative**: <https://source.coop/fiboa/us-usda-cropland>
+- **USDA NASS**: <https://www.nass.usda.gov>
+- **NASA POWER**: <https://power.larc.nasa.gov>
+- **USGS Earth Explorer**: <https://earthexplorer.usgs.gov>
+- **Sentinel Hub**: <https://www.sentinel-hub.com>
 
 ## Citation
 
@@ -279,5 +279,5 @@ Available at https://nassgeodata.gmu.edu/CropScape/
 
 For issues or questions:
 
-- **GitHub Issues**: https://github.com/borealBytes/ag-skills/issues
+- **GitHub Issues**: <https://github.com/borealBytes/ag-skills/issues>
 - **Documentation**: See individual skill SKILL.md files
