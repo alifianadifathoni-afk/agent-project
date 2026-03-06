@@ -8,10 +8,11 @@ This script analyzes CDL data to generate:
 - Field-level crop histories
 """
 
-import pandas as pd
-import numpy as np
-from pathlib import Path
 from collections import Counter
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
 
 
 def load_cdl_data(csv_path: str) -> pd.DataFrame:
