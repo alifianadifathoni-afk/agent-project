@@ -125,3 +125,8 @@ test-results/
 .cache/
 tmp/
 temp/
+
+# ===========================
+# Agricultural Data (re-downloadable)
+# ===========================
+data/

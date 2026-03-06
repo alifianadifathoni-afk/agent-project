@@ -57,24 +57,25 @@ You **MUST** read and follow the style guides. These are not optional — they d
 
 ## Quick reference
 
-| Need                                  | File                                                                                              |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| What can I do? What must I ask about? | [agentic/agentic_coding.md](agentic/agentic_coding.md)                                            |
-| Step-by-step workflow                 | [agentic/workflow_guide.md](agentic/workflow_guide.md)                                            |
-| Code style, commits, PRs              | [agentic/contribute_standards.md](agentic/contribute_standards.md)                                |
-| Project-specific rules                | [agentic/custom-instructions.md](agentic/custom-instructions.md)                                  |
-| Markdown formatting                   | [agentic/markdown_style_guide.md](agentic/markdown_style_guide.md)                                |
-| Mermaid diagrams                      | [agentic/mermaid_style_guide.md](agentic/mermaid_style_guide.md)                                  |
-| Document templates                    | [agentic/markdown_templates/](agentic/markdown_templates/)                                        |
-| Diagram type guides                   | [agentic/mermaid_diagrams/](agentic/mermaid_diagrams/)                                            |
-| System constraints                    | [agentic/operational_readiness.md](agentic/operational_readiness.md)                              |
-| Token management                      | [agentic/context_budget_guide.md](agentic/context_budget_guide.md)                                |
-| Error recovery                        | [agentic/agent_error_recovery.md](agentic/agent_error_recovery.md)                                |
-| Idempotent script standards           | [agentic/idempotent_design_patterns.md](agentic/idempotent_design_patterns.md)                    |
-| Local CI runner                       | [`scripts/ci-local.sh`](scripts/ci-local.sh)                                                      |
-| License and attribution               | [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE)                                                       |
-| File locations                        | [agentic/file_organization.md](agentic/file_organization.md)                                      |
-| Architecture decisions                | [agentic/adr/](agentic/adr/) (global) + subsystem `adr/` directories (for example `.crewai/adr/`) |
+| Need                                  | File                                                                                                                   |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| What can I do? What must I ask about? | [agentic/agentic_coding.md](agentic/agentic_coding.md)                                                                 |
+| Step-by-step workflow                 | [agentic/workflow_guide.md](agentic/workflow_guide.md)                                                                 |
+| Code style, commits, PRs              | [agentic/contribute_standards.md](agentic/contribute_standards.md)                                                     |
+| Project-specific rules                | [agentic/custom-instructions.md](agentic/custom-instructions.md)                                                       |
+| Markdown formatting                   | [agentic/markdown_style_guide.md](agentic/markdown_style_guide.md)                                                     |
+| Mermaid diagrams                      | [agentic/mermaid_style_guide.md](agentic/mermaid_style_guide.md)                                                       |
+| Document templates                    | [agentic/markdown_templates/](agentic/markdown_templates/)                                                             |
+| Diagram type guides                   | [agentic/mermaid_diagrams/](agentic/mermaid_diagrams/)                                                                 |
+| System constraints                    | [agentic/operational_readiness.md](agentic/operational_readiness.md)                                                   |
+| Token management                      | [agentic/context_budget_guide.md](agentic/context_budget_guide.md)                                                     |
+| Error recovery                        | [agentic/agent_error_recovery.md](agentic/agent_error_recovery.md)                                                     |
+| Idempotent script standards           | [agentic/idempotent_design_patterns.md](agentic/idempotent_design_patterns.md)                                         |
+| Local CI runner                       | [`scripts/ci-local.sh`](scripts/ci-local.sh)                                                                           |
+| License and attribution               | [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE)                                                                            |
+| File locations                        | [agentic/file_organization.md](agentic/file_organization.md)                                                           |
+| Architecture decisions                | [agentic/adr/](agentic/adr/) (global) + subsystem `adr/` directories (for example `.crewai/adr/`)                      |
+| Agent Skills (agricultural data)      | [`.opencode/skills/`](.opencode/skills/) + [`.claude/skills/`](.claude/skills/) + [`.agents/skills/`](.agents/skills/) |
 
 ---
 
@@ -86,6 +87,9 @@ docs/project/pr/                → Pull request records (pr-NNNNNNNN-short-desc
 docs/project/issues/            → Issue records (issue-NNNNNNNN-short-description.md)
 docs/project/kanban/            → Sprint/project boards ({scope}-{identifier}-short-description.md)
 .crewai/adr/                    → CrewAI subsystem architecture decisions
+.opencode/skills/               → OpenCode Agent Skills (auto-discoverable)
+.claude/skills/                 → Claude Code compatibility (symlinks)
+.agents/skills/                 → Agent Skills spec (symlinks)
 apps/                           → Deployable apps (web, api, cli, mobile)
 services/                       → Long-running backend services and workers
 packages/                       → Shared libraries/modules across runtimes
@@ -94,23 +98,26 @@ notebooks/                      → Jupyter notebooks, prototypes, analysis
 src/                            → Language-focused source workspace (Python-first)
 ```
 
+> **Note:** When working with agricultural data tasks, check [`.opencode/skills/`](.opencode/skills/) for available data download and analysis skills.
+
 ---
 
 ## Repo entrypoint map
 
 Use this map when a task is focused on one subsystem.
 
-| Area                     | Start here                                                 | Why                                                           |
-| ------------------------ | ---------------------------------------------------------- | ------------------------------------------------------------- |
-| Core agent workflow      | [agentic/instructions.md](agentic/instructions.md)         | Required read order, escalation rules, and task-based loading |
-| CrewAI review system     | [.crewai/README.md](.crewai/README.md)                     | Review architecture, crews, outputs, and local run model      |
-| GitHub Actions/CI        | [.github/workflows/README.md](.github/workflows/README.md) | CI phases, reusable workflow layout, and troubleshooting      |
-| App workspace            | [apps/README.md](apps/README.md)                           | Deployable app layout (`apps/web`, `apps/api`, etc.)          |
-| Service workspace        | [services/README.md](services/README.md)                   | Background services/workers organization                      |
-| Shared package workspace | [packages/README.md](packages/README.md)                   | Reusable library/module conventions                           |
-| SQL/data workspace       | [data/sql/README.md](data/sql/README.md)                   | SQL schemas, migrations, and seed conventions                 |
-| Language workspace       | [src/README.md](src/README.md)                             | Language-focused code organization                            |
-| Notebook workspace       | [notebooks/README.md](notebooks/README.md)                 | Prototyping conventions and graduation path to `src/`         |
+| Area                             | Start here                                                 | Why                                                           |
+| -------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------- |
+| Core agent workflow              | [agentic/instructions.md](agentic/instructions.md)         | Required read order, escalation rules, and task-based loading |
+| CrewAI review system             | [.crewai/README.md](.crewai/README.md)                     | Review architecture, crews, outputs, and local run model      |
+| GitHub Actions/CI                | [.github/workflows/README.md](.github/workflows/README.md) | CI phases, reusable workflow layout, and troubleshooting      |
+| App workspace                    | [apps/README.md](apps/README.md)                           | Deployable app layout (`apps/web`, `apps/api`, etc.)          |
+| Service workspace                | [services/README.md](services/README.md)                   | Background services/workers organization                      |
+| Shared package workspace         | [packages/README.md](packages/README.md)                   | Reusable library/module conventions                           |
+| SQL/data workspace               | [data/sql/README.md](data/sql/README.md)                   | SQL schemas, migrations, and seed conventions                 |
+| Language workspace               | [src/README.md](src/README.md)                             | Language-focused code organization                            |
+| Notebook workspace               | [notebooks/README.md](notebooks/README.md)                 | Prototyping conventions and graduation path to `src/`         |
+| Agent Skills (agricultural data) | [`.opencode/skills/`](.opencode/skills/)                   | Agricultural data download and analysis skills                |
 
 ---
 
