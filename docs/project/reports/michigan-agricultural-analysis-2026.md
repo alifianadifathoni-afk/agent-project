@@ -311,4 +311,234 @@ Open `figures/soil_ph_choropleth.html` in a web browser to view:
 
 ---
 
+## Appendix: Data Sources
+
+| Data Type           | Provider   | Citation                                              |
+| ------------------- | ---------- | ----------------------------------------------------- |
+| Weather             | NASA POWER | NASA Prediction of Worldwide Energy Resources (POWER) |
+| Soil                | USDA NRCS  | Soil Survey Geographic Database (SSURGO)              |
+| Field Boundaries    | USDA NASS  | Crop Sequence Boundaries                              |
+| Cropland Data Layer | USDA NASS  | CDL 2020-2024, Published crop-specific data layer     |
+
+---
+
+## Appendix: Analysis Scripts
+
+### Python Analysis Scripts
+
+All analysis was performed using Python scripts located in `scripts/`:
+
+| Script                       | Purpose                                                |
+| ---------------------------- | ------------------------------------------------------ |
+| `download_fields.py`         | Download USDA NASS Crop Sequence Boundaries from S3    |
+| `analyze_weather.py`         | Process NASA POWER weather data, calculate GDD, trends |
+| `analyze_soil.py`            | Analyze SSURGO soil properties and correlations        |
+| `analyze_cdl.py`             | Process CDL crop rotation patterns                     |
+| `generate_report_figures.py` | Generate all matplotlib visualizations                 |
+
+### Weather Analysis Code
+
+```python
+# From scripts/analyze_weather.py
+import pandas as pd
+import numpy as np
+from scipy import stats
+
+def calculate_gdd(df: pd.DataFrame, base_temp: float = 10.0) -> pd.DataFrame:
+    """Calculate Growing Degree Days from daily temperature data."""
+    df = df.copy()
+    tmax = df['T2M_MAX'].clip(upper=30)
+    tmin = df['T2M_MIN'].clip(lower=base_temp)
+    df['GDD'] = ((tmax + tmin) / 2) - base_temp
+    df['GDD'] = df['GDD'].clip(lower=0)
+    return df
+
+def calculate_trend(df: pd.DataFrame, column: str) -> dict:
+    """Calculate linear trend with statistical significance."""
+    yearly = df.resample('YE', on='DATE')[column].mean().dropna()
+    x = np.arange(len(yearly))
+    slope, intercept, r_value, p_value, _ = stats.linregress(x, yearly.values)
+    return {
+        'slope': slope * 10,  # per decade
+        'r_squared': r_value ** 2,
+        'p_value': p_value
+    }
+
+# Usage:
+weather_df = pd.read_csv('weather_data.csv', parse_dates=['DATE'])
+weather_df = calculate_gdd(weather_df)
+temp_trend = calculate_trend(weather_df, 'T2M')
+# Result: +2.6°C/decade, R²=0.40, p=0.25
+```
+
+### Soil Analysis Code
+
+```python
+# From scripts/analyze_soil.py
+import pandas as pd
+import numpy as np
+
+def calculate_correlation_matrix(df: pd.DataFrame, columns: list) -> pd.DataFrame:
+    """Calculate correlation matrix for soil properties."""
+    return df[columns].corr()
+
+def field_summary(df: pd.DataFrame) -> pd.DataFrame:
+    """Generate field-level soil summaries."""
+    field_agg = df.groupby('field_id').agg({
+        'ph': 'mean',
+        'om_pct': 'mean',
+        'clay_pct': 'mean',
+        'cec': 'mean',
+    }).round(2)
+    return field_agg
+
+# Key correlation results:
+# Clay-CEC: r = 0.97 (very strong positive)
+# Sand-CEC: r = -0.94 (very strong negative)
+# OM-CEC: r = 0.82 (strong positive)
+```
+
+### CDL Analysis Code
+
+```python
+# From scripts/analyze_cdl.py
+CDL_CROP_NAMES = {
+    1: 'Corn', 12: 'Soybeans', 24: 'Winter Wheat',
+    43: 'Pasture/Hay', 82: 'Developed', 87: 'Woody Wetlands'
+}
+
+def analyze_rotation_patterns(df: pd.DataFrame, year_cols: list) -> pd.DataFrame:
+    """Analyze crop rotation patterns across years."""
+    results = []
+    for idx, row in df.iterrows():
+        crops = [row[col] for col in year_cols if col in row.index]
+        unique_crops = len(set(crops))
+        rotation_type = 'Monoculture' if unique_crops == 1 else \
+                        'Simple Rotation' if unique_crops == 2 else 'Complex Rotation'
+        results.append({'field_id': row.get('field_id'),
+                       'rotation_type': rotation_type})
+    return pd.DataFrame(results)
+```
+
+---
+
+## Appendix: SQL Schema
+
+The analysis uses a PostgreSQL database with PostGIS extension for spatial data.
+
+### Core Tables
+
+```sql
+-- From data/sql/michigan_agriculture.sql
+CREATE TABLE fields (
+    field_id VARCHAR(50) PRIMARY KEY,
+    county VARCHAR(100),
+    state VARCHAR(2),
+    area_acres DECIMAL(10, 2),
+    geometry GEOMETRY(MULTIPOLYGON, 4326)
+);
+
+CREATE TABLE weather_daily (
+    field_id VARCHAR(50) REFERENCES fields(field_id),
+    date DATE NOT NULL,
+    t2m_max DECIMAL(5, 2),
+    t2m_min DECIMAL(5, 2),
+    prectotcorr DECIMAL(8, 4),
+    gdd DECIMAL(6, 2),
+    CONSTRAINT uk_weather_field_date UNIQUE (field_id, date)
+);
+
+CREATE TABLE soil_horizons (
+    field_id VARCHAR(50) REFERENCES fields(field_id),
+    horizon_name VARCHAR(20),
+    ph DECIMAL(4, 2),
+    om_pct DECIMAL(5, 2),
+    clay_pct DECIMAL(5, 2),
+    cec DECIMAL(6, 2)
+);
+
+CREATE TABLE cdl_observations (
+    field_id VARCHAR(50) REFERENCES fields(field_id),
+    year INTEGER NOT NULL,
+    cdl_code INTEGER,
+    percentage DECIMAL(5, 2),
+    CONSTRAINT uk_cdl_field_year UNIQUE (field_id, year)
+);
+```
+
+### Useful SQL Queries
+
+```sql
+-- Get weather summary for a field
+SELECT
+    EXTRACT(YEAR FROM date) as year,
+    AVG(t2m_avg) as avg_temp,
+    SUM(prectotcorr) as total_precip,
+    SUM(gdd) as total_gdd
+FROM weather_daily
+WHERE field_id = '260910001561001'
+GROUP BY year
+ORDER BY year;
+
+-- Soil correlation analysis
+SELECT
+    CORR(clay_pct, cec) as clay_cec_corr,
+    CORR(sand_pct, cec) as sand_cec_corr,
+    CORR(om_pct, cec) as om_cec_corr
+FROM soil_horizons;
+
+-- Field summary view
+CREATE VIEW field_summary AS
+SELECT
+    f.field_id, f.county, f.area_acres,
+    ROUND(AVG(sh.ph), 2) as avg_ph,
+    ROUND(AVG(sh.om_pct), 2) as avg_om,
+    c.cdl_category as current_crop
+FROM fields f
+LEFT JOIN soil_horizons sh ON f.field_id = sh.field_id
+LEFT JOIN cdl_observations c ON f.field_id = c.field_id
+    AND c.year = (SELECT MAX(year) FROM cdl_observations WHERE field_id = f.field_id)
+GROUP BY f.field_id, f.county, f.area_acres, c.cdl_category;
+```
+
+---
+
+## Appendix: Running the Analysis
+
+### Prerequisites
+
+```bash
+# Install dependencies
+pip install pandas numpy matplotlib seaborn scipy geopandas psycopg2-binary
+
+# Set up database
+psql -U postgres -d agdata -f data/sql/michigan_agriculture.sql
+```
+
+### Execution
+
+```bash
+# Download field boundaries
+python scripts/download_fields.py
+
+# Analyze weather data
+python scripts/analyze_weather.py data/weather_2020_2024.csv output/
+
+# Analyze soil data
+python scripts/analyze_soil.py data/soil_data.csv output/
+
+# Analyze CDL
+python scripts/analyze_cdl.py data/cdl_data.csv output/
+
+# Generate all figures
+python scripts/generate_report_figures.py \
+    data/weather_processed.csv \
+    data/soil_data.csv \
+    data/cdl_data.csv
+```
+
+---
+
 _Report generated by automated agricultural data analysis pipeline_
+
+_Analysis scripts available in `scripts/` directory_
