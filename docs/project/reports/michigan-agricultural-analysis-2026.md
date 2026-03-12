@@ -41,7 +41,7 @@ This report presents a comprehensive exploratory data analysis of agricultural f
 
 ### 1.3 Field Overview Dashboard
 
-![Field Dashboard](figures/field_dashboard.png)
+![Field Dashboard](docs/project/reports/figures/field_dashboard.png)
 
 **Figure 2:** (a) Field size by county, (b) Crop distribution pie chart, (c) Total area by crop type, (d) Number of fields per county.
 
@@ -58,7 +58,7 @@ This report presents a comprehensive exploratory data analysis of agricultural f
 
 ### 2.1 Annual Temperature and Precipitation Trends
 
-![Annual Weather Trends](figures/weather_annual_trends.png)
+![Annual Weather Trends](docs/project/reports/figures/weather_annual_trends.png)
 
 **Figure 1:** (a) Annual average temperature, (b) Annual total precipitation, (c) Monthly temperature pattern, (d) Growing season vs. non-growing season comparison.
 
@@ -73,7 +73,7 @@ The warming trend observed is consistent with regional climate patterns, though 
 
 ### 2.2 Time Series Analysis
 
-![Weather Time Series](figures/weather_timeseries.png)
+![Weather Time Series](docs/project/reports/figures/weather_timeseries.png)
 
 **Figure 2:** Daily temperature with 30-day rolling average (top) and daily precipitation with 30-day rolling sum (bottom) from 2020-2024.
 
@@ -88,7 +88,7 @@ The 30-day rolling averages reveal smooth seasonal transitions and identify peri
 
 ### 2.3 Seasonal and GDD Analysis
 
-![Seasonal GDD Analysis](figures/seasonal_gdd_analysis.png)
+![Seasonal GDD Analysis](docs/project/reports/figures/seasonal_gdd_analysis.png)
 
 **Figure 3:** (a) Average monthly precipitation, (b) Growing Degree Days by year, (c) Growing season precipitation, (d) Monthly temperature variability.
 
@@ -100,7 +100,7 @@ The 30-day rolling averages reveal smooth seasonal transitions and identify peri
 
 ### 2.4 Weather Extremes Analysis
 
-![Weather Extremes](figures/weather_extremes.png)
+![Weather Extremes](docs/project/reports/figures/weather_extremes.png)
 
 **Figure 4:** (a) Heating vs Cooling degree days by year, (b) Daily precipitation distribution, (c) Wind speed distribution.
 
@@ -117,7 +117,7 @@ The 30-day rolling averages reveal smooth seasonal transitions and identify peri
 
 ### 3.1 Soil Property Distributions
 
-![Soil Distributions](figures/soil_distributions.png)
+![Soil Distributions](docs/project/reports/figures/soil_distributions.png)
 
 **Figure 3:** (a) Soil pH distribution, (b) Organic matter distribution, (c) Clay content by field, (d) Average soil texture composition, (e) pH by drainage class, (f) CEC vs. clay content relationship.
 
@@ -136,7 +136,7 @@ The 30-day rolling averages reveal smooth seasonal transitions and identify peri
 
 ### 3.2 Soil Correlation Matrix
 
-![Soil Correlation](figures/soil_correlation.png)
+![Soil Correlation](docs/project/reports/figures/soil_correlation.png)
 
 **Figure 5:** Correlation matrix for soil properties showing relationships between pH, organic matter, clay, sand, silt, CEC, and available water capacity.
 
@@ -148,7 +148,7 @@ The 30-day rolling averages reveal smooth seasonal transitions and identify peri
 
 ### 3.3 Soil Profile Analysis
 
-![Soil Horizons](figures/soil_horizons.png)
+![Soil Horizons](docs/project/reports/figures/soil_horizons.png)
 
 **Figure 6:** (a) Soil pH profile by depth for each field, (b) Organic matter profile by depth.
 
@@ -164,13 +164,13 @@ The 30-day rolling averages reveal smooth seasonal transitions and identify peri
 
 ### 4.1 Crop Type Distribution
 
-![CDL Analysis](figures/cdl_analysis.png)
+![CDL Analysis](docs/project/reports/figures/cdl_analysis.png)
 
 **Figure 7:** (a) Crop type distribution by year, (b) Crop dominance percentage over time.
 
 ### 4.2 Crop Rotation Patterns
 
-![CDL Rotation Heatmap](figures/cdl_rotation_heatmap.png)
+![CDL Rotation Heatmap](docs/project/reports/figures/cdl_rotation_heatmap.png)
 
 **Figure 8:** Heatmap showing crop rotation patterns across all fields from 2020-2024.
 
@@ -204,7 +204,7 @@ The 30-day rolling averages reveal smooth seasonal transitions and identify peri
 
 ### 5.1 Growing Season Weather vs. Soil Properties
 
-![Weather-Soil Integration](figures/weather_soil_integration.png)
+![Weather-Soil Integration](docs/project/reports/figures/weather_soil_integration.png)
 
 **Figure 9:** Relationships between growing season weather parameters and soil properties across fields.
 
@@ -251,7 +251,7 @@ The 30-day rolling averages reveal smooth seasonal transitions and identify peri
 
 ### 7.1 Interactive Field Map
 
-Open `figures/field_interactive_map.html` in a web browser to explore:
+Open `docs/project/reports/figures/field_interactive_map.html` in a web browser to explore:
 
 - **Satellite basemap** toggle (Esri World Imagery)
 - **Field polygons** colored by CDL crop type
@@ -260,7 +260,7 @@ Open `figures/field_interactive_map.html` in a web browser to explore:
 
 ### 7.2 Soil pH Choropleth Map
 
-Open `figures/soil_ph_choropleth.html` in a web browser to view:
+Open `docs/project/reports/figures/soil_ph_choropleth.html` in a web browser to view:
 
 - **Fields colored by soil pH** (red = acidic, green = neutral)
 - **Color scale legend** showing pH range
