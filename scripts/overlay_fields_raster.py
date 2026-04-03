@@ -21,6 +21,17 @@ import json
 from pathlib import Path
 from typing import Optional
 
+# Load .env file at start to ensure credentials are available
+PROJECT_ROOT = Path(__file__).parent.parent
+env_file = PROJECT_ROOT / ".env"
+if env_file.exists():
+    with open(env_file) as f:
+        for line in f:
+            if line.strip() and not line.startswith("#"):
+                if "=" in line:
+                    key, value = line.strip().split("=", 1)
+                    os.environ.setdefault(key, value)
+
 import geopandas as gpd
 import matplotlib.pyplot as plt
 import numpy as np
@@ -72,9 +83,9 @@ def search_landsat_scenes(
     username = os.environ["USGS_USERNAME"]
     password = os.environ["USGS_PASSWORD"]
 
-    api = API(username, password)
-
     try:
+        api = API(username, password)
+
         scenes = api.search(
             dataset="landsat_ot_c2_l2",
             bbox=(bbox[1], bbox[0], bbox[3], bbox[2]),
@@ -89,8 +100,284 @@ def search_landsat_scenes(
                 print(f"  - {scene['display_id']}: {scene['cloud_cover']}% cloud")
 
         return scenes
+    except Exception as e:
+        print(f"Warning: Could not search Landsat scenes: {e}")
+        print("Falling back to synthetic data...")
+        return []
     finally:
-        api.logout()
+        try:
+            api.logout()
+        except:
+            pass
+
+
+def search_landsat_scenes_aws(
+    fields: gpd.GeoDataFrame,
+    start_date: str = "2024-06-01",
+    end_date: str = "2024-08-31",
+    cloud_cover_max: float = 20.0,
+) -> list:
+    """Search Landsat scenes using AWS STAC API (Planetary Computer)."""
+    try:
+        from pystac_client import Client
+    except ImportError:
+        print("Warning: pystac-client not installed. Trying alternative...")
+        return search_landsat_scenes_stac_usgs(fields, start_date, end_date, cloud_cover_max)
+
+    bbox = fields.total_bounds
+    print(f"Searching Landsat scenes via AWS STAC for bbox: {bbox}")
+    print(f"  Date range: {start_date} to {end_date}")
+    print(f"  Max cloud cover: {cloud_cover_max}%")
+
+    try:
+        catalog = Client.open("https://planetarycomputer.microsoft.com/api/stac/v1")
+
+        search = catalog.search(
+            collections=["landsat-c2-l2"],
+            bbox=[bbox[0], bbox[1], bbox[2], bbox[3]],
+            datetime=f"{start_date}/{end_date}",
+            query={"eo:cloud_cover": {"lte": cloud_cover_max}},
+        )
+
+        items = list(search.items())
+        print(f"Found {len(items)} scene(s)")
+
+        scenes = []
+        for item in items[:10]:
+            scenes.append(
+                {
+                    "id": item.id,
+                    "display_id": item.id,
+                    "entity_id": item.id,
+                    "cloud_cover": item.properties.get("eo:cloud_cover", 50),
+                    "date": item.properties.get("datetime", "")[:10],
+                    "stac_item": item,
+                }
+            )
+            print(f"  - {item.id}: {item.properties.get('eo:cloud_cover', '?')}% cloud")
+
+        return scenes
+    except Exception as e:
+        print(f"Warning: AWS STAC search failed: {e}")
+        return []
+
+
+def search_landsat_scenes_stac_usgs(
+    fields: gpd.GeoDataFrame,
+    start_date: str = "2024-06-01",
+    end_date: str = "2024-08-31",
+    cloud_cover_max: float = 20.0,
+) -> list:
+    """Search Landsat scenes using USGS STAC API."""
+    import requests
+
+    bbox = fields.total_bounds
+    print(f"Searching Landsat scenes via USGS STAC for bbox: {bbox}")
+
+    try:
+        url = "https://landsatlook.usgs.gov/stac-server/search"
+
+        payload = {
+            "collections": ["landsat-c2-l2"],
+            "bbox": [bbox[0], bbox[1], bbox[2], bbox[3]],
+            "datetime": f"{start_date}/{end_date}",
+            "query": {"eo:cloud_cover": {"lte": cloud_cover_max}},
+        }
+
+        headers = {"Content-Type": "application/json"}
+        response = requests.post(url, json=payload, headers=headers, timeout=30)
+
+        if response.status_code == 200:
+            data = response.json()
+            features = data.get("features", [])
+            print(f"Found {len(features)} scene(s)")
+
+            scenes = []
+            for item in features[:10]:
+                props = item.get("properties", {})
+                scenes.append(
+                    {
+                        "id": item.get("id"),
+                        "display_id": item.get("id"),
+                        "entity_id": item.get("id"),
+                        "cloud_cover": props.get("eo:cloud_cover", 50),
+                        "date": props.get("datetime", "")[:10],
+                        "stac_item": item,
+                    }
+                )
+                print(f"  - {item.get('id')}: {props.get('eo:cloud_cover', '?')}% cloud")
+
+            return scenes
+        else:
+            print(f"STAC search failed: {response.status_code}")
+            return []
+    except Exception as e:
+        print(f"Warning: USGS STAC search failed: {e}")
+        return []
+
+
+def download_landsat_aws(
+    scene: dict,
+    bands: list[str],
+    output_dir: Path,
+) -> dict:
+    """Download Landsat bands from AWS STAC using Planetary Computer signing."""
+    import requests
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    band_files = {}
+
+    stac_item = scene.get("stac_item")
+    if not stac_item:
+        print("Error: No STAC item data")
+        return band_files
+
+    # Handle both pystac Item and dict
+    if hasattr(stac_item, "assets"):
+        assets = stac_item.assets
+    elif isinstance(stac_item, dict):
+        assets = stac_item.get("assets", {})
+    else:
+        print("Error: No assets found in STAC item")
+        return band_files
+
+    band_mapping = {
+        "B4": ["sr_red", "red"],
+        "B5": ["sr_nir08", "nir08", "sr_nir", "nir"],
+    }
+
+    for band in bands:
+        asset_keys = band_mapping.get(band, [band.lower()])
+        asset = None
+
+        for key in asset_keys:
+            if key in assets:
+                asset = assets[key]
+                break
+
+        if not asset:
+            print(f"  Asset not found for band {band}")
+            continue
+
+        # Get href
+        if hasattr(asset, "href"):
+            href = asset.href
+        else:
+            href = asset.get("href", "")
+
+        if not href:
+            print(f"  No href for band {band}")
+            continue
+
+        print(f"Processing {band}...")
+
+        try:
+            # Try to get signed URL from Planetary Computer
+            if "blob.core.windows.net" in href:
+                # Get signed URL from Planetary Computer API
+                sign_url = "https://planetarycomputer.microsoft.io/api/sas/v1/sign"
+                signed_response = requests.post(sign_url, json={"href": href}, timeout=30)
+
+                if signed_response.status_code == 200:
+                    signed_data = signed_response.json()
+                    download_url = signed_data.get("href", href)
+                else:
+                    download_url = href
+                    print(
+                        f"  Warning: Could not sign URL, trying direct: {signed_response.status_code}"
+                    )
+            else:
+                download_url = href
+
+            print(f"  Downloading from {download_url[:80]}...")
+
+            # Download the file
+            response = requests.get(download_url, timeout=180, stream=True)
+
+            if response.status_code == 200:
+                ext = ".tif" if ".tif" in href.lower() else ".TIF"
+                out_path = output_dir / f"{scene['id']}_SR_{band}{ext}"
+
+                with open(out_path, "wb") as f:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        f.write(chunk)
+
+                band_files[band] = str(out_path)
+                print(f"  Saved: {out_path.name} ({out_path.stat().st_size / 1024:.1f} KB)")
+            else:
+                print(f"  Failed to download: {response.status_code}")
+
+        except Exception as e:
+            print(f"  Error downloading {band}: {e}")
+
+    return band_files
+
+    # Handle both pystac Item and dict
+    if hasattr(stac_item, "assets"):
+        assets = stac_item.assets
+    else:
+        assets = stac_item.get("assets", {})
+
+    band_mapping = {
+        "B4": ["sr_red", "red"],
+        "B5": ["sr_nir08", "nir08", "sr_nir", "nir"],
+    }
+
+    for band in bands:
+        asset_keys = band_mapping.get(band, [band.lower()])
+        asset = None
+
+        for key in asset_keys:
+            if key in assets:
+                asset = assets[key]
+                break
+
+        if not asset:
+            print(f"  Asset not found for band {band}")
+            continue
+
+        # Get href - handle both pystac and dict
+        if hasattr(asset, "href"):
+            href = asset.href
+        else:
+            href = asset.get("href", "")
+
+        if not href:
+            print(f"  No href for band {band}")
+            continue
+
+        # Clean up href
+        href = href.strip()
+        if "planetarycomputer" in href.lower():
+            href = (
+                href.replace("sas", "https")
+                .replace("blob", "https:// landsateuwest.blob")
+                .replace("core.windows.net", "core.windows.net")
+            )
+
+        print(f"Downloading {band} from remote...")
+
+        try:
+            # Use rasterio to read directly from URL (works with public AWS URLs)
+            import io
+
+            # Try with rasterio MemoryFile first
+            response = requests.get(href, timeout=120)
+            if response.status_code == 200:
+                ext = ".tif" if ".tif" in href.lower() else ".TIF"
+                out_path = output_dir / f"{scene['id']}_SR_{band}{ext}"
+
+                with open(out_path, "wb") as f:
+                    f.write(response.content)
+
+                band_files[band] = str(out_path)
+                print(f"  Saved: {out_path.name}")
+            else:
+                print(f"  Failed to download: {response.status_code}")
+        except Exception as e:
+            print(f"  Error downloading {band}: {e}")
+
+    return band_files
 
 
 def download_landsat_bands(
@@ -523,27 +810,45 @@ def main():
     field_id = field.get("field_id", "FIELD_0001")
 
     if check_usgs_credentials():
-        print("\n[Option 1] USGS credentials found - using real Landsat data")
+        print("\n[Option 1] USGS/AWS credentials found - attempting real Landsat data")
         print("=" * 60)
 
-        scenes = search_landsat_scenes(fields)
+        use_synthetic = True
+
+        # Try AWS STAC first
+        print("\nTrying AWS STAC (Planetary Computer)...")
+        scenes = search_landsat_scenes_aws(fields)
+
+        if not scenes:
+            print("\nTrying USGS STAC API...")
+            scenes = search_landsat_scenes_stac_usgs(fields)
+
+        if not scenes:
+            print("\nTrying legacy USGS API (landsatxplore)...")
+            scenes = search_landsat_scenes(fields)
 
         if scenes:
-            best_scene = sorted(scenes, key=lambda s: s["cloud_cover"])[0]
-            print(f"\nBest scene: {best_scene['display_id']} ({best_scene['cloud_cover']}% cloud)")
+            best_scene = sorted(scenes, key=lambda s: s.get("cloud_cover", 100))[0]
+            print(
+                f"\nBest scene: {best_scene.get('display_id', best_scene.get('id'))} ({best_scene.get('cloud_cover', '?')}% cloud)"
+            )
 
             landsat_dir = DATA_DIR / "landsat"
-            band_files = download_landsat_bands(best_scene, ["B4", "B5"], landsat_dir)
+
+            # Try AWS download first
+            if "stac_item" in best_scene:
+                band_files = download_landsat_aws(best_scene, ["B4", "B5"], landsat_dir)
+            else:
+                band_files = download_landsat_bands(best_scene, ["B4", "B5"], landsat_dir)
 
             if band_files.get("B4") and band_files.get("B5"):
                 red_path = band_files["B4"]
                 nir_path = band_files["B5"]
+                use_synthetic = False
             else:
                 print("ERROR: Band files not found, falling back to synthetic")
-                use_synthetic = True
         else:
-            print("WARNING: No scenes found, falling back to synthetic data")
-            use_synthetic = True
+            print("WARNING: No scenes found from any source, falling back to synthetic data")
     else:
         print("\n[Option 2] No USGS credentials - generating synthetic rasters")
         print("=" * 60)
