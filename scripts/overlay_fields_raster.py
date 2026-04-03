@@ -312,6 +312,92 @@ def plot_ndvi(fields: gpd.GeoDataFrame, ndvi_path: str, output_path: str) -> Non
     print(f"Saved NDVI map: {output_path}")
 
 
+def plot_combined_bands(
+    red_path: str,
+    nir_path: str,
+    ndvi_path: str,
+    fields: gpd.GeoDataFrame,
+    output_path: str,
+) -> None:
+    """Create combined 1x3 figure with Red, NIR, and NDVI bands."""
+    fig, axes = plt.subplots(1, 3, figsize=(24, 6))
+    fig.patch.set_facecolor("white")
+
+    field = fields.iloc[0]
+    field_id = field.get("field_id", "FIELD_0001")
+
+    # Panel 1: Red Band (B4)
+    with rasterio.open(red_path) as src:
+        red_data = src.read(1)
+        red_valid = red_data[~np.isnan(red_data)]
+        red_bounds = src.bounds
+        red_extent = [red_bounds.left, red_bounds.right, red_bounds.bottom, red_bounds.top]
+
+        im_red = axes[0].imshow(
+            red_data, cmap="Reds", vmin=np.min(red_valid), vmax=np.max(red_valid), extent=red_extent
+        )
+        axes[0].set_xlim(red_bounds.left, red_bounds.right)
+        axes[0].set_ylim(red_bounds.bottom, red_bounds.top)
+
+        cbar_red = plt.colorbar(im_red, ax=axes[0], shrink=0.6)
+        cbar_red.set_label("Reflectance", fontsize=10)
+
+    fields.plot(ax=axes[0], facecolor="none", edgecolor="yellow", linewidth=2)
+    axes[0].set_title("Red Band (B4)", fontsize=12, fontweight="bold")
+    axes[0].set_xlabel("Longitude", fontsize=10)
+    axes[0].set_ylabel("Latitude", fontsize=10)
+
+    # Panel 2: NIR Band (B5)
+    with rasterio.open(nir_path) as src:
+        nir_data = src.read(1)
+        nir_valid = nir_data[~np.isnan(nir_data)]
+        nir_bounds = src.bounds
+        nir_extent = [nir_bounds.left, nir_bounds.right, nir_bounds.bottom, nir_bounds.top]
+
+        im_nir = axes[1].imshow(
+            nir_data, cmap="gray", vmin=np.min(nir_valid), vmax=np.max(nir_valid), extent=nir_extent
+        )
+        axes[1].set_xlim(nir_bounds.left, nir_bounds.right)
+        axes[1].set_ylim(nir_bounds.bottom, nir_bounds.top)
+
+        cbar_nir = plt.colorbar(im_nir, ax=axes[1], shrink=0.6)
+        cbar_nir.set_label("Reflectance", fontsize=10)
+
+    fields.plot(ax=axes[1], facecolor="none", edgecolor="yellow", linewidth=2)
+    axes[1].set_title("NIR Band (B5)", fontsize=12, fontweight="bold")
+    axes[1].set_xlabel("Longitude", fontsize=10)
+    axes[1].set_ylabel("Latitude", fontsize=10)
+
+    # Panel 3: NDVI
+    with rasterio.open(ndvi_path) as src:
+        ndvi_data = src.read(1)
+        ndvi_valid = ndvi_data[~np.isnan(ndvi_data)]
+        ndvi_bounds = src.bounds
+        ndvi_extent = [ndvi_bounds.left, ndvi_bounds.right, ndvi_bounds.bottom, ndvi_bounds.top]
+
+        im_ndvi = axes[2].imshow(ndvi_data, cmap="RdYlGn", vmin=-0.2, vmax=1.0, extent=ndvi_extent)
+        axes[2].set_xlim(ndvi_bounds.left, ndvi_bounds.right)
+        axes[2].set_ylim(ndvi_bounds.bottom, ndvi_bounds.top)
+
+        cbar_ndvi = plt.colorbar(im_ndvi, ax=axes[2], shrink=0.6)
+        cbar_ndvi.set_label("NDVI", fontsize=10)
+
+    fields.plot(ax=axes[2], facecolor="none", edgecolor="blue", linewidth=2)
+    axes[2].set_title("NDVI", fontsize=12, fontweight="bold")
+    axes[2].set_xlabel("Longitude", fontsize=10)
+    axes[2].set_ylabel("Latitude", fontsize=10)
+
+    fig.suptitle(f"Field {field_id} - Red, NIR, and NDVI Bands", fontsize=14, fontweight="bold")
+
+    fig.subplots_adjust(wspace=0.25)
+
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    plt.savefig(output_path, dpi=150, bbox_inches="tight")
+    plt.close()
+
+    print(f"Saved combined bands figure: {output_path}")
+
+
 def plot_combined_workflow_3x2(
     red_path: str,
     nir_path: str,
@@ -588,14 +674,24 @@ def main():
 
     plot_ndvi(fields, ndvi_path, str(OUTPUT_DIR / f"{field_id}_ndvi.png"))
 
-    print("\nGenerating combined 2x2 workflow figure...")
-    plot_combined_workflow_3x2(
+    print("\nGenerating combined 1x3 figure...")
+    plot_combined_bands(
         clipped_red,
         clipped_nir,
         ndvi_path,
         fields,
-        str(OUTPUT_DIR / f"{field_id}_overlay_workflow.png"),
+        str(OUTPUT_DIR / f"{field_id}_combined_bands.png"),
     )
+
+    # Combined 3x2 workflow figure disabled - uncomment to enable
+    # print("\nGenerating combined 2x2 workflow figure...")
+    # plot_combined_workflow_3x2(
+    #     clipped_red,
+    #     clipped_nir,
+    #     ndvi_path,
+    #     fields,
+    #     str(OUTPUT_DIR / f"{field_id}_overlay_workflow.png"),
+    # )
 
     print("\n" + "=" * 60)
     print("Processing complete!")
@@ -604,7 +700,6 @@ def main():
     print(f"  - {field_id}_red_band.png")
     print(f"  - {field_id}_nir_band.png")
     print(f"  - {field_id}_ndvi.png")
-    print(f"  - {field_id}_overlay_workflow.png (combined 2x2)")
 
 
 if __name__ == "__main__":
