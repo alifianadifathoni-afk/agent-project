@@ -1,0 +1,4 @@
+field_id,region,crop_name,area_acres,state,county,soil_type,organic_matter_pct,soil_ph,drainage_class,water_capacity,clay_content_pct,ndvi_mean,ndvi_min,ndvi_max,std_ndvi,date
+MI2600001,michigan,corn,2668.56,MI,Shiawassee,Convent,2.8,6.5,Moderately well drained,0.2,18,0.775,0.659,0.852,0.117,2024-07-15
+MI2600002,michigan,corn,1076.34,MI,Gratiot,Reynolds,3.0,6.6,Moderately well drained,0.21,20,0.796,0.677,0.876,0.092,2024-07-15
+MI2600003,michigan,corn,2595.36,MI,Saginaw,Saginaw,3.8,7.0,Poorly drained,0.24,45,0.651,0.554,0.716,0.061,2024-07-15

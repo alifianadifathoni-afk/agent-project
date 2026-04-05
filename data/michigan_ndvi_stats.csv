@@ -1,0 +1,4 @@
+field_id,mean_ndvi,min_ndvi,max_ndvi,std_ndvi,pixel_count,date,source
+MI2600001,0.775,0.659,0.852,0.117,106742,2024-07-15,Sentinel-2 (synthetic)
+MI2600002,0.796,0.677,0.876,0.092,43053,2024-07-15,Sentinel-2 (synthetic)
+MI2600003,0.651,0.554,0.716,0.061,103814,2024-07-15,Sentinel-2 (synthetic)

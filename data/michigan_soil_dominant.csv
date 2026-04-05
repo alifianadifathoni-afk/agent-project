@@ -1,0 +1,10 @@
+mukey,muname,compname,comppct_r,drainagecl,hzdept_r,hzdepb_r,om_r,ph1to1h2o_r,awc_r,claytotal_r,silttotal_r,sandtotal_r,dbthirdbar_r,cec7_r,field_id
+1234561,"Michigamme mucky silt loam, 0 to 2 percent slopes",Michigamme,85,Poorly drained,0,30,4.5,6.8,0.18,22,58,20,1.25,18.0,MI2600001
+1234561,"Michigamme mucky silt loam, 0 to 2 percent slopes",Brailsford,10,Somewhat poorly drained,30,60,2.0,7.2,0.15,35,45,20,1.45,22.0,MI2600001
+1234562,"Convent loam, 2 to 6 percent slopes",Convent,90,Moderately well drained,0,25,2.8,6.5,0.2,18,52,30,1.3,14.0,MI2600001
+2345671,"Blount silt loam, 2 to 4 percent slopes",Blount,90,Somewhat poorly drained,0,30,3.5,6.3,0.22,25,55,20,1.4,20.0,MI2600002
+2345671,"Blount silt loam, 2 to 4 percent slopes",Glynwood,8,Well drained,30,60,1.5,6.8,0.16,30,40,30,1.55,18.0,MI2600002
+2345672,"Reynolds silt loam, 1 to 3 percent slopes",Reynolds,92,Moderately well drained,0,35,3.0,6.6,0.21,20,58,22,1.35,16.0,MI2600002
+3456781,"Saginaw clay, 0 to 2 percent slopes, frequently flooded",Saginaw,95,Poorly drained,0,30,3.8,7.0,0.24,45,40,15,1.5,28.0,MI2600003
+3456781,"Saginaw clay, 0 to 2 percent slopes, frequently flooded",Tuscola,3,Somewhat poorly drained,30,60,2.5,7.2,0.2,35,45,20,1.45,24.0,MI2600003
+3456782,"Lenawee silty clay, 0 to 3 percent slopes",Lenawee,88,Poorly drained,0,25,4.0,7.1,0.23,40,45,15,1.38,26.0,MI2600003
