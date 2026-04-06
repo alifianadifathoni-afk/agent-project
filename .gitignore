@@ -52,10 +52,10 @@ out/
 
 # ===========================
 # Jupyter Notebooks
-# ===========================
-.ipynb_checkpoints/
+.ipynbynb_checkpoints/
 notebooks/.ipynb_checkpoints/
 notebooks/**/.ipynb_checkpoints/
+notebooks/analysis/08_soil_sustainability.ipynb
 
 # ===========================
 # Python
