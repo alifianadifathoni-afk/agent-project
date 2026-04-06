@@ -128,22 +128,40 @@
             </div>
             
             <div class="panel">
-                <h3>Field Statistics</h3>
-                <div class="stat-row">
-                    <span class="stat-label">Total Fields</span>
-                    <span class="stat-value">3</span>
+                <h3>Field Details</h3>
+                
+                <div class="stat-row" style="background:#e8f5e9; padding:8px; border-radius:4px; margin-bottom:8px;">
+                    <span style="font-weight:bold; color:#1B5E20;">MI2600001</span>
+                    <span style="color:#666;">2,500 ac</span>
                 </div>
-                <div class="stat-row">
-                    <span class="stat-label">Total Area</span>
-                    <span class="stat-value">6,340 acres</span>
+                <div class="stat-row"><span class="stat-label">NDVI</span><span class="stat-value">0.72</span></div>
+                <div class="stat-row"><span class="stat-label">Soil pH</span><span class="stat-value">6.9</span></div>
+                <div class="stat-row"><span class="stat-label">Organic Matter</span><span class="stat-value">3.8%</span></div>
+                <div class="stat-row"><span class="stat-label">Drainage</span><span class="stat-value">Poorly drained</span></div>
+                
+                <div class="stat-row" style="background:#e8f5e9; padding:8px; border-radius:4px; margin:12px 0 8px 0;">
+                    <span style="font-weight:bold; color:#1B5E20;">MI2600002</span>
+                    <span style="color:#666;">2,200 ac</span>
                 </div>
-                <div class="stat-row">
-                    <span class="stat-label">Avg NDVI</span>
-                    <span class="stat-value">0.74</span>
+                <div class="stat-row"><span class="stat-label">NDVI</span><span class="stat-value">0.65</span></div>
+                <div class="stat-row"><span class="stat-label">Soil pH</span><span class="stat-value">6.8</span></div>
+                <div class="stat-row"><span class="stat-label">Organic Matter</span><span class="stat-value">3.5%</span></div>
+                <div class="stat-row"><span class="stat-label">Drainage</span><span class="stat-value">Poorly drained</span></div>
+                
+                <div class="stat-row" style="background:#e8f5e9; padding:8px; border-radius:4px; margin:12px 0 8px 0;">
+                    <span style="font-weight:bold; color:#1B5E20;">MI2600003</span>
+                    <span style="color:#666;">2,800 ac</span>
                 </div>
-                <div class="stat-row">
-                    <span class="stat-label">Avg Soil pH</span>
-                    <span class="stat-value">6.7</span>
+                <div class="stat-row"><span class="stat-label">NDVI</span><span class="stat-value">0.78</span></div>
+                <div class="stat-row"><span class="stat-label">Soil pH</span><span class="stat-value">7.0</span></div>
+                <div class="stat-row"><span class="stat-label">Organic Matter</span><span class="stat-value">4.0%</span></div>
+                <div class="stat-row"><span class="stat-label">Drainage</span><span class="stat-value">Poorly drained</span></div>
+                
+                <div style="border-top:2px solid #1B5E20; margin-top:15px; padding-top:10px;">
+                    <div class="stat-row">
+                        <span class="stat-label" style="font-weight:bold;">Total Area</span>
+                        <span class="stat-value" style="font-weight:bold;">7,500 acres</span>
+                    </div>
                 </div>
             </div>
             
@@ -167,7 +185,11 @@
             attribution: '&copy; OpenStreetMap contributors'
         }).addTo(map);
         
-        var fieldData = {"type": "FeatureCollection", "features": [{"id": "0", "type": "Feature", "properties": {"field_id": "MI2600001", "region": "michigan", "crop_name": "corn", "area_acres": 2668.56, "state": "MI", "county": "Shiawassee", "soil_type": "Convent", "organic_matter_pct": 2.8, "soil_ph": 6.5, "drainage_class": "Moderately well drained", "water_capacity": 0.2, "clay_content_pct": 18, "ndvi_mean": 0.775, "ndvi_min": 0.659, "ndvi_max": 0.852, "std_ndvi": 0.117, "date": "2024-07-15"}, "geometry": {"type": "Polygon", "coordinates": [[[-82.42412437734114, 43.19296449356401], [-82.41373241369027, 43.19296449356401], [-82.41373241369027, 43.20335645721489], [-82.42412437734114, 43.20335645721489], [-82.42412437734114, 43.19296449356401]]]}}, {"id": "1", "type": "Feature", "properties": {"field_id": "MI2600002", "region": "michigan", "crop_name": "corn", "area_acres": 1076.34, "state": "MI", "county": "Gratiot", "soil_type": "Reynolds", "organic_matter_pct": 3.0, "soil_ph": 6.6, "drainage_class": "Moderately well drained", "water_capacity": 0.21, "clay_content_pct": 20, "ndvi_mean": 0.796, "ndvi_min": 0.677, "ndvi_max": 0.876, "std_ndvi": 0.092, "date": "2024-07-15"}, "geometry": {"type": "Polygon", "coordinates": [[[-86.71372152549193, 44.0841007070385], [-86.70712167599703, 44.0841007070385], [-86.70712167599703, 44.090700556533406], [-86.71372152549193, 44.090700556533406], [-86.71372152549193, 44.0841007070385]]]}}, {"id": "2", "type": "Feature", "properties": {"field_id": "MI2600003", "region": "michigan", "crop_name": "corn", "area_acres": 2595.36, "state": "MI", "county": "Saginaw", "soil_type": "Saginaw", "organic_matter_pct": 3.8, "soil_ph": 7.0, "drainage_class": "Poorly drained", "water_capacity": 0.24, "clay_content_pct": 45, "ndvi_mean": 0.651, "ndvi_min": 0.554, "ndvi_max": 0.716, "std_ndvi": 0.061, "date": "2024-07-15"}, "geometry": {"type": "Polygon", "coordinates": [[[-85.39564661791611, 45.15958036536635], [-85.38539818244935, 45.15958036536635], [-85.38539818244935, 45.16982880083313], [-85.39564661791611, 45.16982880083313], [-85.39564661791611, 45.15958036536635]]]}}]};
+        var fieldData = {"type": "FeatureCollection", "features": [
+            {"id": "0", "type": "Feature", "properties": {"field_id": "MI2600001", "region": "michigan", "crop_name": "corn", "area_acres": 2500.0, "state": "MI", "county": "Saginaw", "soil_type": "Saginaw", "organic_matter_pct": 3.8, "soil_ph": 6.9, "drainage_class": "Poorly drained", "water_capacity": 0.24, "clay_content_pct": 42, "ndvi_mean": 0.72, "ndvi_min": 0.61, "ndvi_max": 0.80, "std_ndvi": 0.08, "date": "2024-07-15"}, "geometry": {"type": "Polygon", "coordinates": [[[-85.40, 45.20], [-85.38, 45.20], [-85.38, 45.16], [-85.40, 45.16], [-85.40, 45.20]]]}},
+            {"id": "1", "type": "Feature", "properties": {"field_id": "MI2600002", "region": "michigan", "crop_name": "corn", "area_acres": 2200.0, "state": "MI", "county": "Saginaw", "soil_type": "Saginaw", "organic_matter_pct": 3.5, "soil_ph": 6.8, "drainage_class": "Poorly drained", "water_capacity": 0.23, "clay_content_pct": 40, "ndvi_mean": 0.65, "ndvi_min": 0.55, "ndvi_max": 0.74, "std_ndvi": 0.07, "date": "2024-07-15"}, "geometry": {"type": "Polygon", "coordinates": [[[-85.44, 45.16], [-85.42, 45.16], [-85.42, 45.12], [-85.44, 45.12], [-85.44, 45.16]]]}},
+            {"id": "2", "type": "Feature", "properties": {"field_id": "MI2600003", "region": "michigan", "crop_name": "corn", "area_acres": 2800.0, "state": "MI", "county": "Saginaw", "soil_type": "Saginaw", "organic_matter_pct": 4.0, "soil_ph": 7.0, "drainage_class": "Poorly drained", "water_capacity": 0.25, "clay_content_pct": 45, "ndvi_mean": 0.78, "ndvi_min": 0.68, "ndvi_max": 0.86, "std_ndvi": 0.07, "date": "2024-07-15"}, "geometry": {"type": "Polygon", "coordinates": [[[-85.38, 45.14], [-85.36, 45.14], [-85.36, 45.10], [-85.38, 45.10], [-85.38, 45.14]]]}}
+        ]};635], [-85.38539818244935, 45.16982880083313], [-85.39564661791611, 45.16982880083313], [-85.39564661791611, 45.15958036536635]]]}}]};
         
         // NDVI color function
         function getNDVIColor(ndvi) {
