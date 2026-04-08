@@ -411,15 +411,70 @@
         
         // Initialize dashboard
         document.addEventListener('DOMContentLoaded', function() {
-            initKPIs();
-            initCropChart();
-            initNDVIChart();
-            initWeatherCharts();
-            initCorrelationHeatmap();
-            initTopCorrelations();
-            initCropComparison();
-            initStateStats();
-            initMap();
+            console.log('Dashboard initializing...');
+            try {
+                initKPIs();
+                console.log('KPIs initialized');
+                initCropChart();
+                console.log('Crop chart initialized');
+                initNDVIChart();
+                console.log('NDVI chart initialized');
+                initWeatherCharts();
+                console.log('Weather charts initialized');
+                initCorrelationHeatmap();
+                console.log('Correlation heatmap initialized');
+                initTopCorrelations();
+                console.log('Top correlations initialized');
+                initCropComparison();
+                console.log('Crop comparison initialized');
+                initStateStats();
+                console.log('State stats initialized');
+                initMap();
+                console.log('Map initialized');
+            } catch (e) {
+                console.error('Error initializing dashboard:', e);
+            }
+
+            // Fix for charts not rendering in hidden tabs
+            document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
+                tab.addEventListener('shown.bs.tab', function(e) {
+                    const targetId = e.target.getAttribute('data-bs-target');
+                    console.log('Tab shown:', targetId);
+                    
+                    // Fix Leaflet map when map tab is shown
+                    if (targetId === '#map-tab' && map) {
+                        setTimeout(() => {
+                            map.invalidateSize();
+                            console.log('Map invalidated');
+                        }, 200);
+                    }
+                    
+                    // Redraw Plotly charts when their tabs are shown
+                    if (targetId === '#eda-tab') {
+                        setTimeout(() => {
+                            Plotly.relayout('correlation-heatmap', {});
+                            Plotly.relayout('top-correlations', {});
+                            Plotly.relayout('crop-comparison', {});
+                            console.log('EDA charts redrawn');
+                        }, 200);
+                    }
+                    
+                    if (targetId === '#ndvi-tab') {
+                        setTimeout(() => Plotly.relayout('ndvi-chart', {}), 200);
+                    }
+                    
+                    if (targetId === '#weather-tab') {
+                        setTimeout(() => Plotly.relayout('weather-chart', {}), 200);
+                    }
+                    
+                    if (targetId === '#summary') {
+                        setTimeout(() => {
+                            Plotly.relayout('crop-chart', {});
+                            Plotly.relayout('state-stats', {});
+                        }, 200);
+                    }
+                });
+            });
         });
         
         // KPI Functions
@@ -605,6 +660,7 @@
         }
         
         // Map
+        let currentBaseMap;
         function initMap() {
             map = L.map('map').setView([41.0, -88.0], 6);
             
@@ -620,6 +676,7 @@
                 })
             };
             
+            currentBaseMap = baseMaps.streets;
             baseMaps.streets.addTo(map);
             
             L.control.layers(baseMaps, {}, {position: 'topleft'}).addTo(map);
@@ -651,7 +708,14 @@
                 marker.addTo(map);
             });
             
+            // Add event listeners for dropdowns
             document.getElementById('map-layer').addEventListener('change', updateMapLayer);
+            document.getElementById('basemap').addEventListener('change', function(e) {
+                const basemapValue = e.target.value;
+                map.removeLayer(currentBaseMap);
+                currentBaseMap = baseMaps[basemapValue];
+                currentBaseMap.addTo(map);
+            });
         }
         
         function showFieldDetails(field) {
