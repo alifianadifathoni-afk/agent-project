@@ -408,6 +408,7 @@
         const STATE_STATS = {"IA": {"area_acres": 77118.41, "field_id": 8}, "IL": {"area_acres": 90263.28, "field_id": 8}, "IN": {"area_acres": 133390.43, "field_id": 13}, "MO": {"area_acres": 71608.42, "field_id": 8}, "OH": {"area_acres": 136420.53, "field_id": 13}};
         
         let map, fieldLayers = [];
+        let mapInitialized = false;
         
         // Initialize dashboard
         document.addEventListener('DOMContentLoaded', function() {
@@ -429,8 +430,7 @@
                 console.log('Crop comparison initialized');
                 initStateStats();
                 console.log('State stats initialized');
-                initMap();
-                console.log('Map initialized');
+                // Map initialized lazily on first tab click
             } catch (e) {
                 console.error('Error initializing dashboard:', e);
             }
@@ -440,6 +440,15 @@
                 tab.addEventListener('shown.bs.tab', function(e) {
                     const targetId = e.target.getAttribute('data-bs-target');
                     console.log('Tab shown:', targetId);
+                    
+                    // Initialize Leaflet map lazily when map tab is first shown
+                    if (targetId === '#map-tab' && !mapInitialized) {
+                        setTimeout(() => {
+                            initMap();
+                            mapInitialized = true;
+                            console.log('Map initialized lazily');
+                        }, 200);
+                    }
                     
                     // Fix Leaflet map when map tab is shown
                     if (targetId === '#map-tab' && map) {
