@@ -15,7 +15,7 @@ sys.path.insert(
 )
 
 import geopandas as gpd
-from ssurgo_soil import get_soil_at_point, classify_drainage
+from ssurgo_soil import classify_drainage, get_soil_at_point
 
 PROJECT_ROOT = Path(__file__).parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
@@ -38,7 +38,7 @@ def main():
 
     dominant = soil.sort_values(["comppct_r", "hzdept_r"], ascending=[False, True]).iloc[0]
 
-    print(f"\n=== DOMINANT SOIL ===")
+    print("\n=== DOMINANT SOIL ===")
     print(f"  Series: {dominant['compname']}")
     print(f"  Map Unit: {dominant['muname']}")
     print(f"  Composition: {dominant['comppct_r']}%")

@@ -7,17 +7,15 @@ Usage:
     python scripts/eda/06_weather_timeseries.py
 """
 
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from utils import load_weather, export_json, export_csv
-
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
 from pathlib import Path
+
+import matplotlib.pyplot as plt
+import pandas as pd
+from utils import export_json, load_weather
 
 
 def compute_monthly_aggregates(weather_df: pd.DataFrame) -> pd.DataFrame:
@@ -168,7 +166,7 @@ def create_monthly_plot(monthly_df: pd.DataFrame, output_dir: str) -> None:
     plt.savefig(f"{output_dir}/monthly_temperature_trend.png", dpi=300, bbox_inches="tight")
     plt.close()
 
-    print(f"  Saved: monthly_temperature_trend.png")
+    print("  Saved: monthly_temperature_trend.png")
 
 
 def create_yearly_comparison_plot(yearly_df: pd.DataFrame, output_dir: str) -> None:
@@ -202,7 +200,7 @@ def create_yearly_comparison_plot(yearly_df: pd.DataFrame, output_dir: str) -> N
     plt.savefig(f"{output_dir}/yearly_precipitation_comparison.png", dpi=300, bbox_inches="tight")
     plt.close()
 
-    print(f"  Saved: yearly_precipitation_comparison.png")
+    print("  Saved: yearly_precipitation_comparison.png")
 
 
 def run_time_series_analysis(
@@ -253,7 +251,7 @@ def run_time_series_analysis(
     }
 
     export_json(summary, f"{output_dir}/summary.json")
-    print(f"  Saved: summary.json")
+    print("  Saved: summary.json")
 
     return summary
 

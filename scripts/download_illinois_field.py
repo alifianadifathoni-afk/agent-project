@@ -35,7 +35,7 @@ def main():
     )
 
     field = fields.iloc[0]
-    print(f"\nField Details:")
+    print("\nField Details:")
     print(f"  Field ID: {field['field_id']}")
     print(f"  Region: {field['region']}")
     print(f"  Crop: {field['crop_name']}")
@@ -47,7 +47,7 @@ def main():
         title="Illinois Corn Belt Field",
         save_path=str(OUTPUT_DIR / "field_location.png"),
     )
-    print(f"\nSaved:")
+    print("\nSaved:")
     print(f"  - {DATA_DIR / 'field_illinois_corn.geojson'}")
     print(f"  - {OUTPUT_DIR / 'field_location.png'}")
 

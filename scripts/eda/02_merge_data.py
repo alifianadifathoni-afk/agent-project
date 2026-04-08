@@ -11,22 +11,21 @@ Usage:
     python scripts/eda/02_merge_data.py
 """
 
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import pandas as pd
 from utils import (
-    load_fields,
-    load_soil,
-    load_weather,
-    load_cdl,
-    load_ndvi,
-    get_dominant_soil,
     aggregate_weather,
     export_csv,
+    get_dominant_soil,
+    load_cdl,
+    load_fields,
+    load_ndvi,
+    load_soil,
+    load_weather,
 )
-
-import pandas as pd
 
 
 def merge_all_data(

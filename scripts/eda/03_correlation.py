@@ -7,19 +7,20 @@ Usage:
     python scripts/eda/03_correlation.py
 """
 
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from utils import load_fields, export_json, export_csv
-from utils import get_dominant_soil, load_soil, load_weather, load_ndvi, load_cdl
+from pathlib import Path
 
-import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 import seaborn as sns
 from scipy import stats
-from pathlib import Path
+from utils import (
+    export_json,
+)
 
 
 def compute_correlation_matrix(

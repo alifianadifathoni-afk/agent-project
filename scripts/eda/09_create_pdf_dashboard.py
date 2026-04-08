@@ -8,24 +8,22 @@ Usage:
     python scripts/eda/09_create_pdf_dashboard.py
 """
 
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from utils import load_weather
-
 import json
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
-import matplotlib.dates as mdates
-from matplotlib.backends.backend_pdf import PdfPages
 from datetime import datetime
-import geopandas as gpd
-from pathlib import Path
-import seaborn as sns
 
+import geopandas as gpd
+import matplotlib.dates as mdates
+import matplotlib.patches as mpatches
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
+from matplotlib.backends.backend_pdf import PdfPages
+from utils import load_weather
 
 COLORS = {
     "corn": "#F39C12",
@@ -179,7 +177,7 @@ Corn typically shows higher peak NDVI during grain fill; soybeans peak earlier i
 Corn requires more N during vegetative growth; soybeans fix atmospheric N."""
 
     def get_correlation_caption(self):
-        return f"""
+        return """
 [ANALYSIS] Correlation heatmap reveals multi-variable relationships across soil, weather, and NDVI metrics.
 
 [KEY FINDINGS] 
