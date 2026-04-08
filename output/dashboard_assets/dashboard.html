@@ -443,19 +443,23 @@
                     
                     // Initialize Leaflet map lazily when map tab is first shown
                     if (targetId === '#map-tab' && !mapInitialized) {
+                        console.log('Initializing map...');
+                        console.log('FIELD_DATA available:', typeof FIELD_DATA, FIELD_DATA ? FIELD_DATA.length : 0);
                         setTimeout(() => {
-                            initMap();
-                            mapInitialized = true;
-                            console.log('Map initialized lazily');
-                        }, 200);
-                    }
-                    
-                    // Fix Leaflet map when map tab is shown
-                    if (targetId === '#map-tab' && map) {
+                            try {
+                                initMap();
+                                mapInitialized = true;
+                                console.log('Map initialized successfully');
+                            } catch (err) {
+                                console.error('Map initialization failed:', err);
+                                document.getElementById('map').innerHTML = '<div class="alert alert-danger">Error loading map: ' + err.message + '</div>';
+                            }
+                        }, 300);
+                    } else if (targetId === '#map-tab' && map) {
+                        // Only invalidate size if map already exists (don't re-init)
                         setTimeout(() => {
                             map.invalidateSize();
-                            console.log('Map invalidated');
-                        }, 200);
+                        }, 100);
                     }
                     
                     // Redraw Plotly charts when their tabs are shown
@@ -671,11 +675,24 @@
         // Map
         let currentBaseMap;
         function initMap() {
-            map = L.map('map').setView([41.0, -88.0], 6);
+            console.log('initMap called, FIELD_DATA:', FIELD_DATA ? FIELD_DATA.length + ' fields' : 'undefined');
+            
+            if (!FIELD_DATA || FIELD_DATA.length === 0) {
+                throw new Error('No field data available');
+            }
+            
+            const mapContainer = document.getElementById('map');
+            if (!mapContainer) {
+                throw new Error('Map container not found');
+            }
+            
+            map = L.map('map', { preferCanvas: true }).setView([41.0, -88.0], 6);
             
             const baseMaps = {
                 streets: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    maxZoom: 19, attribution: '© OpenStreetMap'
+                    maxZoom: 19, 
+                    attribution: '© OpenStreetMap',
+                    errorTileUrl: '' 
                 }),
                 satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
                     maxZoom: 19, attribution: '© Esri'
@@ -690,27 +707,32 @@
             
             L.control.layers(baseMaps, {}, {position: 'topleft'}).addTo(map);
             
-            // Add field polygons
-            FIELD_DATA.forEach(f => {
-                const lat = f.lat;
-                const lon = f.lon;
+            // Add field markers
+            console.log('Adding', FIELD_DATA.length, 'field markers');
+            FIELD_DATA.forEach((f, idx) => {
+                if (!f.lat || !f.lon) {
+                    console.warn('Field', f.id, 'missing lat/lon');
+                    return;
+                }
                 
-                const color = f.ndvi.peak > 0.7 ? '#27AE60' : f.ndvi.peak > 0.5 ? '#F39C12' : '#E74C3C';
+                const color = f.ndvi && f.ndvi.peak > 0.7 ? '#27AE60' : 
+                              f.ndvi && f.ndvi.peak > 0.5 ? '#F39C12' : '#E74C3C';
                 
-                const marker = L.circleMarker([lat, lon], {
-                    radius: 15,
+                const marker = L.circleMarker([f.lat, f.lon], {
+                    radius: 12,
                     fillColor: color,
                     color: '#fff',
                     weight: 2,
-                    fillOpacity: 0.7
+                    fillOpacity: 0.8
                 });
                 
+                const ndviVal = f.ndvi ? f.ndvi.peak : 'N/A';
                 marker.bindPopup(`
                     <strong>${f.id}</strong><br>
-                    Crop: ${f.crop}<br>
-                    Acres: ${f.area_acres.toLocaleString()}<br>
-                    NDVI Peak: ${f.ndvi.peak}<br>
-                    State: ${f.state}
+                    Crop: ${f.crop || 'Unknown'}<br>
+                    Acres: ${f.area_acres ? f.area_acres.toLocaleString() : 'N/A'}<br>
+                    NDVI Peak: ${ndviVal}<br>
+                    State: ${f.state || 'N/A'}
                 `);
                 
                 marker.on('click', () => showFieldDetails(f));
@@ -725,6 +747,8 @@
                 currentBaseMap = baseMaps[basemapValue];
                 currentBaseMap.addTo(map);
             });
+            
+            console.log('Map setup complete');
         }
         
         function showFieldDetails(field) {
