@@ -9,16 +9,16 @@ Usage:
     python scripts/eda/05_dashboard_export.py
 """
 
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from utils import export_json, export_csv, get_column_descriptions
-from utils import get_dominant_soil, load_soil, load_weather, load_ndvi, load_cdl
+from pathlib import Path
 
 import pandas as pd
-import numpy as np
-from pathlib import Path
+from utils import (
+    export_json,
+)
 
 
 def export_field_summary(df: pd.DataFrame, output_dir: str) -> dict:
@@ -76,7 +76,7 @@ def export_crop_distribution(df: pd.DataFrame, output_dir: str) -> dict:
     }
 
     export_json(data, f"{output_dir}/crop_distribution.json")
-    print(f"  Saved: crop_distribution.json")
+    print("  Saved: crop_distribution.json")
 
     return data
 
@@ -109,7 +109,7 @@ def export_soil_summary(df: pd.DataFrame, output_dir: str) -> dict:
     summary["drainage_distribution"] = drainage
 
     export_json(summary, f"{output_dir}/soil_summary.json")
-    print(f"  Saved: soil_summary.json")
+    print("  Saved: soil_summary.json")
 
     return summary
 
@@ -137,7 +137,7 @@ def export_weather_summary(df: pd.DataFrame, output_dir: str) -> dict:
             }
 
     export_json(summary, f"{output_dir}/weather_summary.json")
-    print(f"  Saved: weather_summary.json")
+    print("  Saved: weather_summary.json")
 
     return summary
 
@@ -166,7 +166,7 @@ def export_ndvi_summary(df: pd.DataFrame, output_dir: str) -> dict:
     data = {"overall": overall, "by_crop": by_crop}
 
     export_json(data, f"{output_dir}/ndvi_summary.json")
-    print(f"  Saved: ndvi_summary.json")
+    print("  Saved: ndvi_summary.json")
 
     return data
 
@@ -186,7 +186,7 @@ def export_kpis(df: pd.DataFrame, output_dir: str) -> dict:
     }
 
     export_json(kpis, f"{output_dir}/kpis.json")
-    print(f"  Saved: kpis.json")
+    print("  Saved: kpis.json")
 
     return kpis
 
@@ -230,7 +230,7 @@ def export_time_series(weather_df: pd.DataFrame, output_dir: str) -> dict:
         d["PRECTOTCORR"] = round(d["PRECTOTCORR"], 1)
 
     export_json(data, f"{output_dir}/monthly_weather.json")
-    print(f"  Saved: monthly_weather.json")
+    print("  Saved: monthly_weather.json")
 
     return {"n_records": len(data)}
 

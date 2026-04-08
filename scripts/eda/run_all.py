@@ -8,7 +8,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-
 SCRIPTS = [
     ("01_download_data.py", "Download/generate data layers"),
     ("02_merge_data.py", "Merge data into single dataset"),

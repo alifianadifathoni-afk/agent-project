@@ -19,14 +19,12 @@ OUTPUT_DIR = PROJECT_ROOT / "output"
 sys.path.insert(0, str(PROJECT_ROOT / ".opencode" / "skills" / "ssurgo-soil" / "src"))
 
 import geopandas as gpd
-import pandas as pd
 import matplotlib.pyplot as plt
-import numpy as np
-from ssurgo_soil import get_soil_at_point
+import pandas as pd
 from ssurgo_workflows import (
     prepare_ssurgo_field_package,
-    render_ssurgo_property_map,
     render_complete_workflow_figure,
+    render_ssurgo_property_map,
 )
 
 

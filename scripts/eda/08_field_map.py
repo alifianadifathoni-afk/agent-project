@@ -8,17 +8,15 @@ Usage:
     python scripts/eda/08_field_map.py
 """
 
-import sys
-import os
 import json
+import os
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from utils import export_json
-
-import pandas as pd
-import geopandas as gpd
 from pathlib import Path
 
+import geopandas as gpd
+import pandas as pd
 
 LEAFLET_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">

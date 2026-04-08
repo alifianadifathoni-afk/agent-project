@@ -7,19 +7,15 @@ Usage:
     python scripts/eda/07_weather_anomalies.py
 """
 
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from utils import load_weather, export_json, export_csv
-
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-from scipy import stats
 from pathlib import Path
 
+import matplotlib.pyplot as plt
+import pandas as pd
+from utils import export_json, load_weather
 
 THRESHOLDS = {
     "heat_wave_days": 3,
@@ -267,7 +263,7 @@ def create_extreme_events_plot(
     plt.savefig(f"{output_dir}/extreme_events_summary.png", dpi=300, bbox_inches="tight")
     plt.close()
 
-    print(f"  Saved: extreme_events_summary.png")
+    print("  Saved: extreme_events_summary.png")
 
 
 def run_anomaly_detection(
@@ -342,7 +338,7 @@ def run_anomaly_detection(
     }
 
     export_json(summary, f"{output_dir}/anomaly_summary.json")
-    print(f"  Saved: anomaly_summary.json")
+    print("  Saved: anomaly_summary.json")
 
     return summary
 

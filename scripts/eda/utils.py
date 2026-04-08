@@ -1,11 +1,11 @@
 """EDA utilities for agricultural data analysis."""
 
-import pandas as pd
-import numpy as np
-import geopandas as gpd
-from pathlib import Path
-from typing import Optional, List, Dict, Any
 import json
+from pathlib import Path
+from typing import Any
+
+import geopandas as gpd
+import pandas as pd
 
 
 def load_fields(path: str = "output/fields_50_cornbelt.geojson") -> gpd.GeoDataFrame:
@@ -48,7 +48,7 @@ def get_dominant_soil(soil_df: pd.DataFrame) -> pd.DataFrame:
 
 
 def aggregate_weather(
-    weather_df: pd.DataFrame, fields_df: Optional[pd.DataFrame] = None
+    weather_df: pd.DataFrame, fields_df: pd.DataFrame | None = None
 ) -> pd.DataFrame:
     """Aggregate weather data to field-level seasonal summaries.
 
@@ -115,7 +115,7 @@ def export_csv(df: pd.DataFrame, path: str) -> None:
     df.to_csv(path, index=False)
 
 
-def get_column_descriptions() -> Dict[str, str]:
+def get_column_descriptions() -> dict[str, str]:
     """Get descriptions for all data columns."""
     return {
         "field_id": "Unique field identifier",

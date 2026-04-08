@@ -7,20 +7,19 @@ Usage:
     python scripts/eda/04_crop_compare.py
 """
 
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from utils import export_json, export_csv, load_fields
-from utils import get_dominant_soil, load_soil, load_weather, load_ndvi, load_cdl
-from utils import aggregate_weather
+from pathlib import Path
 
-import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
 import seaborn as sns
 from scipy import stats
-from pathlib import Path
+from utils import (
+    export_json,
+)
 
 
 def compute_group_statistics(

@@ -11,17 +11,16 @@ Usage:
     python scripts/eda/01_download_data.py
 """
 
-import sys
 import os
+import sys
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from utils import export_csv, export_json
-
-import pandas as pd
-import numpy as np
 import geopandas as gpd
+import numpy as np
+import pandas as pd
 from shapely.geometry import Polygon
+from utils import export_csv
 
 
 def generate_fields(count: int = 50, output_path: str = "output/fields_50_cornbelt.geojson"):
@@ -405,12 +404,12 @@ def main():
     print("\n" + "=" * 60)
     print("Data download complete!")
     print("=" * 60)
-    print(f"\nOutput files:")
-    print(f"  - output/fields_50_cornbelt.geojson")
-    print(f"  - output/soil_data_50_fields.csv")
-    print(f"  - output/weather_50_fields_2022_2024.csv")
-    print(f"  - output/cdl_50_fields.csv")
-    print(f"  - output/ndvi_50_fields.csv")
+    print("\nOutput files:")
+    print("  - output/fields_50_cornbelt.geojson")
+    print("  - output/soil_data_50_fields.csv")
+    print("  - output/weather_50_fields_2022_2024.csv")
+    print("  - output/cdl_50_fields.csv")
+    print("  - output/ndvi_50_fields.csv")
 
 
 if __name__ == "__main__":
