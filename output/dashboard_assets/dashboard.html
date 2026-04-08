@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Corn Belt Agricultural Dashboard</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet">
+    
+    <style>
+        :root {
+            --corn-color: #F39C12;
+            --soybean-color: #27AE60;
+            --heat-color: #E74C3C;
+            --cold-color: #3498DB;
+            --drought-color: #E67E22;
+            --primary: #2C3E50;
+            --secondary: #7F8C8D;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f6fa;
+        }
+        
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.3rem;
+        }
+        
+        .nav-tabs .nav-link {
+            color: var(--primary);
+            font-weight: 600;
+            padding: 12px 20px;
+        }
+        
+        .nav-tabs .nav-link.active {
+            background: #fff;
+            border-top: 3px solid var(--primary);
+            color: var(--primary);
+        }
+        
+        .tab-content {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-top: 15px;
+            min-height: 600px;
+        }
+        
+        .kpi-card {
+            background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .kpi-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.12);
+        }
+        
+        .kpi-value {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .kpi-label {
+            font-size: 0.85rem;
+            color: var(--secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .chart-container {
+            border-radius: 8px;
+            padding: 15px;
+            background: #fff;
+            margin-bottom: 20px;
+        }
+        
+        #map {
+            height: 500px;
+            border-radius: 8px;
+        }
+        
+        .legend-box {
+            background: #f8f9fa;
+            border-radius: 6px;
+            padding: 12px;
+            font-size: 0.85rem;
+        }
+        
+        .field-detail-modal .modal-body {
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        
+        .filter-section {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .filter-section label {
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: var(--secondary);
+        }
+        
+        .export-btn {
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        
+        .export-btn:hover {
+            background: #34495e;
+        }
+        
+        .alert-box {
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+        
+        .alert-warning {
+            background: #fff3cd;
+            border-left: 4px solid var(--heat-color);
+        }
+        
+        .alert-info {
+            background: #d1ecf1;
+            border-left: 4px solid var(--cold-color);
+        }
+        
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 400px;
+        }
+        
+        @media print {
+            .nav-tabs { display: none; }
+            .tab-pane { display: block !important; }
+            .export-btn { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background: var(--primary);">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                🌽 Corn Belt Agricultural Dashboard
+            </a>
+            <div class="d-flex align-items-center">
+                <span class="text-white me-3">Report Period: 2022-2024</span>
+                <button class="export-btn" onclick="window.print()">🖨️ Print / PDF</button>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="container-fluid px-4">
+        <ul class="nav nav-tabs mt-3" id="dashboardTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="summary-tab" data-bs-toggle="tab" data-bs-target="#summary" type="button">Executive Summary</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="ndvi-tab" data-bs-toggle="tab" data-bs-target="#ndvi" type="button">Vegetation Health</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="weather-tab" data-bs-toggle="tab" data-bs-target="#weather" type="button">Weather & Anomalies</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="map-tab" data-bs-toggle="tab" data-bs-target="#map-tab" type="button">Geospatial Map</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="eda-tab" data-bs-toggle="tab" data-bs-target="#eda" type="button">EDA Relationships</button>
+            </li>
+        </ul>
+        
+        <div class="tab-content" id="dashboardTabsContent">
+            <!-- Tab 1: Executive Summary -->
+            <div class="tab-pane fade show active" id="summary" role="tabpanel">
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="kpi-card">
+                            <div class="kpi-value" id="kpi-acres">{total_acres}</div>
+                            <div class="kpi-label">Total Acres</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="kpi-card">
+                            <div class="kpi-value" id="kpi-fields">{total_fields}</div>
+                            <div class="kpi-label">Active Fields</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="kpi-card">
+                            <div class="kpi-value" id="kpi-ndvi" style="color: var(--soybean-color)">{avg_ndvi}</div>
+                            <div class="kpi-label">Avg NDVI</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="kpi-card">
+                            <div class="kpi-value" id="kpi-alerts" style="color: var(--heat-color)">{risk_alerts}</div>
+                            <div class="kpi-label">Risk Alerts</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="chart-container">
+                            <h5>Crop Distribution</h5>
+                            <div id="crop-chart"></div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="chart-container">
+                            <h5>Quick field Stats by State</h5>
+                            <div id="state-stats"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tab 2: NDVI Analysis -->
+            <div class="tab-pane fade" id="ndvi" role="tabpanel">
+                <div class="filter-section mb-3">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <label>Select Field(s)</label>
+                            <select class="form-select" id="ndvi-field-filter">
+                                <option value="all">All Fields</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label>Select Crop</label>
+                            <select class="form-select" id="ndvi-crop-filter">
+                                <option value="all">All Crops</option>
+                                <option value="corn">Corn</option>
+                                <option value="soybeans">Soybeans</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="chart-container">
+                            <h5>NDVI Seasonal Progression by Field</h5>
+                            <div id="ndvi-chart"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-md-12">
+                        <div class="alert-box alert-info">
+                            <strong>💡 Advice:</strong> Fields with NDVI >0.6 indicate healthy vegetation. 
+                            Click on field bars in the chart to see detailed information.
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tab 3: Weather & Anomalies -->
+            <div class="tab-pane fade" id="weather" role="tabpanel">
+                <div class="filter-section mb-3">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label>Year</label>
+                            <select class="form-select" id="weather-year">
+                                <option value="all">All Years</option>
+                                <option value="2022">2022</option>
+                                <option value="2023">2023</option>
+                                <option value="2024">2024</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label>Metric</label>
+                            <select class="form-select" id="weather-metric">
+                                <option value="temp">Temperature</option>
+                                <option value="precip">Precipitation</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="chart-container">
+                            <h5>Weekly Weather Time Series</h5>
+                            <div id="weather-chart"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-2">
+                    <div class="col-md-4">
+                        <div class="alert-box alert-warning">
+                            <strong>⚠️ Heat Waves:</strong> <span id="heat-wave-count">0</span> events detected
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="alert-box alert-info">
+                            <strong>❄️ Cold Snaps:</strong> <span id="cold-snap-count">0</span> events detected
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="alert-box alert-warning">
+                            <strong>🏜️ Droughts:</strong> <span id="drought-count">0</span> periods detected
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tab 4: Geospatial Map -->
+            <div class="tab-pane fade" id="map-tab" role="tabpanel">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="filter-section">
+                            <label>Map Layer</label>
+                            <select class="form-select" id="map-layer">
+                                <option value="ndvi_peak">NDVI Peak</option>
+                                <option value="crop">Crop Type</option>
+                                <option value="soil_om">Soil Organic Matter</option>
+                                <option value="soil_ph">Soil pH</option>
+                            </select>
+                            <hr>
+                            <label>Basemap</label>
+                            <select class="form-select" id="basemap">
+                                <option value="streets">OpenStreetMap</option>
+                                <option value="satellite">Satellite</option>
+                                <option value="terrain">Terrain</option>
+                            </select>
+                        </div>
+                        <div class="legend-box mt-3" id="map-legend">
+                            <strong>Legend:</strong><br>
+                            <span style="background: #27AE60; padding: 2px 8px; color: white; border-radius: 3px;">High NDVI</span>
+                            <span style="background: #F39C12; padding: 2px 8px; color: white; border-radius: 3px; margin-left: 5px;">Low NDVI</span>
+                        </div>
+                    </div>
+                    <div class="col-md-9">
+                        <div id="map"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tab 5: EDA Relationships -->
+            <div class="tab-pane fade" id="eda" role="tabpanel">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="chart-container">
+                            <h5>Correlation Heatmap</h5>
+                            <div id="correlation-heatmap"></div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="chart-container">
+                            <h5>Top 5 Correlations</h5>
+                            <div id="top-correlations"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-md-12">
+                        <div class="chart-container">
+                            <h5>Corn vs Soybean Comparison</h5>
+                            <div id="crop-comparison"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Field Detail Modal -->
+    <div class="modal fade field-detail-modal" id="fieldModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="fieldModalTitle">Field Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="fieldModalBody">
+                    <!-- Dynamic content -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // EMBEDDED DATA
+        const FIELD_DATA = [{"id": "CB_OH_001", "state": "OH", "region": "corn_belt", "crop": "corn", "area_acres": 9413.64, "lat": 39.142022, "lon": -81.381236, "soil": {"type": "Blount", "om_pct": 3.19, "ph": 6.74, "drainage": "Somewhat poorly drained", "clay_pct": 26.0, "bulk_density": 1.48}, "weather": {"temp_mean": 21.993703703703705, "precip_total": 1534.62, "solar_total": 9119.41, "humidity_mean": 70.54385620915033}, "ndvi": {"peak": 0.909, "mean": 0.586, "std": 0.099}}, {"id": "CB_IL_002", "state": "IL", "region": "corn_belt", "crop": "corn", "area_acres": 3970.78, "lat": 37.999875, "lon": -89.663004, "soil": {"type": "Nicollet", "om_pct": 4.07, "ph": 7.27, "drainage": "Somewhat poorly drained", "clay_pct": 28.9, "bulk_density": 1.31}, "weather": {"temp_mean": 23.461786492374724, "precip_total": 1460.06, "solar_total": 9696.19, "humidity_mean": 71.70050108932462}, "ndvi": {"peak": 0.713, "mean": 0.526, "std": 0.165}}, {"id": "CB_IN_003", "state": "IN", "region": "corn_belt", "crop": "soybeans", "area_acres": 19933.86, "lat": 37.725646, "lon": -85.612005, "soil": {"type": "Webster", "om_pct": 4.94, "ph": 7.58, "drainage": "Poorly drained", "clay_pct": 27.2, "bulk_density": 1.38}, "weather": {"temp_mean": 23.423943355119825, "precip_total": 1514.65, "solar_total": 9437.91, "humidity_mean": 70.79644880174291}, "ndvi": {"peak": 0.842, "mean": 0.475, "std": 0.102}}, {"id": "CB_IL_004", "state": "IL", "region": "corn_belt", "crop": "soybeans", "area_acres": 9788.55, "lat": 42.461058, "lon": -89.030074, "soil": {"type": "Nicollet", "om_pct": 4.69, "ph": 7.16, "drainage": "Somewhat poorly drained", "clay_pct": 27.2, "bulk_density": 1.48}, "weather": {"temp_mean": 19.69607843137255, "precip_total": 1453.57, "solar_total": 9268.29, "humidity_mean": 73.85891067538125}, "ndvi": {"peak": 0.676, "mean": 0.437, "std": 0.115}}, {"id": "CB_MO_005", "state": "MO", "region": "corn_belt", "crop": "soybeans", "area_acres": 5121.41, "lat": 36.59225, "lon": -92.088965, "soil": {"type": "Nicollet", "om_pct": 3.55, "ph": 6.93, "drainage": "Somewhat poorly drained", "clay_pct": 26.1, "bulk_density": 1.46}, "weather": {"temp_mean": 24.06159041394336, "precip_total": 1510.75, "solar_total": 9899.15, "humidity_mean": 72.07529411764705}, "ndvi": {"peak": 0.635, "mean": 0.441, "std": 0.135}}, {"id": "CB_OH_006", "state": "OH", "region": "corn_belt", "crop": "soybeans", "area_acres": 14729.25, "lat": 39.782266, "lon": -82.67572, "soil": {"type": "Hoytville", "om_pct": 3.47, "ph": 6.44, "drainage": "Poorly drained", "clay_pct": 28.0, "bulk_density": 1.49}, "weather": {"temp_mean": 21.302875816993463, "precip_total": 1237.26, "solar_total": 9204.54, "humidity_mean": 69.44335511982571}, "ndvi": {"peak": 0.65, "mean": 0.483, "std": 0.086}}, {"id": "CB_IN_007", "state": "IN", "region": "corn_belt", "crop": "soybeans", "area_acres": 670.16, "lat": 39.556938, "lon": -86.130342, "soil": {"type": "Blount", "om_pct": 2.42, "ph": 7.03, "drainage": "Somewhat poorly drained", "clay_pct": 21.4, "bulk_density": 1.4}, "weather": {"temp_mean": 22.099237472766884, "precip_total": 1271.51, "solar_total": 9448.36, "humidity_mean": 69.909651416122}, "ndvi": {"peak": 0.643, "mean": 0.458, "std": 0.196}}, {"id": "CB_IN_008", "state": "IN", "region": "corn_belt", "crop": "corn", "area_acres": 20312.74, "lat": 38.182096, "lon": -88.239794, "soil": {"type": "Nicollet", "om_pct": 4.02, "ph": 6.75, "drainage": "Somewhat poorly drained", "clay_pct": 25.2, "bulk_density": 1.57}, "weather": {"temp_mean": 23.3822440087146, "precip_total": 1496.48, "solar_total": 9650.85, "humidity_mean": 72.2229411764706}, "ndvi": {"peak": 0.676, "mean": 0.47, "std": 0.133}}, {"id": "CB_OH_009", "state": "OH", "region": "corn_belt", "crop": "soybeans", "area_acres": 1056.74, "lat": 41.329391, "lon": -83.281545, "soil": {"type": "Canisteo", "om_pct": 3.83, "ph": 6.84, "drainage": "Poorly drained", "clay_pct": 24.9, "bulk_density": 1.54}, "weather": {"temp_mean": 21.079368191721134, "precip_total": 1142.41, "solar_total": 9260.94, "humidity_mean": 69.85063180827886}, "ndvi": {"peak": 0.724, "mean": 0.438, "std": 0.111}}, {"id": "CB_OH_010", "state": "OH", "region": "corn_belt", "crop": "soybeans", "area_acres": 7036.38, "lat": 40.040534, "lon": -84.011847, "soil": {"type": "Nicollet", "om_pct": 4.45, "ph": 6.74, "drainage": "Somewhat poorly drained", "clay_pct": 29.8, "bulk_density": 1.47}, "weather": {"temp_mean": 21.045337690631808, "precip_total": 1260.14, "solar_total": 9380.79, "humidity_mean": 71.05143790849674}, "ndvi": {"peak": 0.678, "mean": 0.479, "std": 0.102}}, {"id": "CB_IN_011", "state": "IN", "region": "corn_belt", "crop": "soybeans", "area_acres": 13808.77, "lat": 39.064242, "lon": -87.771056, "soil": {"type": "Nicollet", "om_pct": 4.97, "ph": 6.48, "drainage": "Somewhat poorly drained", "clay_pct": 23.5, "bulk_density": 1.45}, "weather": {"temp_mean": 22.62662309368192, "precip_total": 1446.62, "solar_total": 9519.93, "humidity_mean": 72.03936819172114}, "ndvi": {"peak": 0.794, "mean": 0.575, "std": 0.152}}, {"id": "CB_IL_012", "state": "IL", "region": "corn_belt", "crop": "soybeans", "area_acres": 14415.86, "lat": 38.424272, "lon": -87.621661, "soil": {"type": "Pewamo", "om_pct": 4.83, "ph": 7.16, "drainage": "Poorly drained", "clay_pct": 39.6, "bulk_density": 1.62}, "weather": {"temp_mean": 22.941960784313725, "precip_total": 1494.06, "solar_total": 9592.86, "humidity_mean": 72.7365577342048}, "ndvi": {"peak": 0.622, "mean": 0.439, "std": 0.119}}, {"id": "CB_IL_013", "state": "IL", "region": "corn_belt", "crop": "soybeans", "area_acres": 19329.81, "lat": 41.974137, "lon": -89.1084, "soil": {"type": "Brockhaven", "om_pct": 2.19, "ph": 6.52, "drainage": "Well drained", "clay_pct": 19.1, "bulk_density": 1.35}, "weather": {"temp_mean": 20.512723311546843, "precip_total": 1379.65, "solar_total": 9471.01, "humidity_mean": 71.95668845315905}, "ndvi": {"peak": 0.668, "mean": 0.466, "std": 0.114}}, {"id": "CB_OH_014", "state": "OH", "region": "corn_belt", "crop": "corn", "area_acres": 13565.59, "lat": 41.864102, "lon": -81.121865, "soil": {"type": "Brockhaven", "om_pct": 2.46, "ph": 6.38, "drainage": "Well drained", "clay_pct": 19.4, "bulk_density": 1.53}, "weather": {"temp_mean": 19.788169934640525, "precip_total": 1086.6, "solar_total": 8990.62, "humidity_mean": 75.1780174291939}, "ndvi": {"peak": 0.635, "mean": 0.453, "std": 0.198}}, {"id": "CB_MO_015", "state": "MO", "region": "corn_belt", "crop": "soybeans", "area_acres": 8104.45, "lat": 37.927013, "lon": -93.673926, "soil": {"type": "Canisteo", "om_pct": 3.06, "ph": 6.63, "drainage": "Poorly drained", "clay_pct": 33.4, "bulk_density": 1.33}, "weather": {"temp_mean": 24.5099128540305, "precip_total": 1487.82, "solar_total": 9942.54, "humidity_mean": 66.92736383442266}, "ndvi": {"peak": 0.65, "mean": 0.461, "std": 0.165}}, {"id": "CB_IA_016", "state": "IA", "region": "corn_belt", "crop": "corn", "area_acres": 21736.87, "lat": 42.906591, "lon": -96.015421, "soil": {"type": "Nicollet", "om_pct": 4.43, "ph": 6.83, "drainage": "Somewhat poorly drained", "clay_pct": 25.1, "bulk_density": 1.4}, "weather": {"temp_mean": 21.79771241830065, "precip_total": 1111.48, "solar_total": 9682.65, "humidity_mean": 61.48651416122004}, "ndvi": {"peak": 0.87, "mean": 0.554, "std": 0.094}}, {"id": "CB_IA_017", "state": "IA", "region": "corn_belt", "crop": "soybeans", "area_acres": 2077.84, "lat": 41.380465, "lon": -96.408481, "soil": {"type": "Clarion", "om_pct": 3.86, "ph": 6.78, "drainage": "Well drained", "clay_pct": 21.8, "bulk_density": 1.46}, "weather": {"temp_mean": 23.00041394335512, "precip_total": 1144.54, "solar_total": 9802.96, "humidity_mean": 61.350174291939}, "ndvi": {"peak": 0.837, "mean": 0.559, "std": 0.117}}, {"id": "CB_IN_018", "state": "IN", "region": "corn_belt", "crop": "corn", "area_acres": 4384.27, "lat": 40.585081, "lon": -88.203821, "soil": {"type": "Blount", "om_pct": 2.14, "ph": 6.67, "drainage": "Somewhat poorly drained", "clay_pct": 25.5, "bulk_density": 1.44}, "weather": {"temp_mean": 21.59790849673203, "precip_total": 1271.27, "solar_total": 9449.6, "humidity_mean": 69.42474945533769}, "ndvi": {"peak": 0.782, "mean": 0.504, "std": 0.137}}, {"id": "CB_IA_019", "state": "IA", "region": "corn_belt", "crop": "soybeans", "area_acres": 3925.13, "lat": 43.08931, "lon": -92.448562, "soil": {"type": "Hoytville", "om_pct": 3.39, "ph": 6.86, "drainage": "Poorly drained", "clay_pct": 29.8, "bulk_density": 1.4}, "weather": {"temp_mean": 20.401045751633987, "precip_total": 1437.2, "solar_total": 9328.87, "humidity_mean": 70.13429193899782}, "ndvi": {"peak": 0.778, "mean": 0.479, "std": 0.173}}, {"id": "CB_MO_020", "state": "MO", "region": "corn_belt", "crop": "corn", "area_acres": 8541.81, "lat": 38.865191, "lon": -93.714308, "soil": {"type": "Brockhaven", "om_pct": 1.57, "ph": 6.89, "drainage": "Well drained", "clay_pct": 17.5, "bulk_density": 1.37}, "weather": {"temp_mean": 23.888758169934643, "precip_total": 1327.52, "solar_total": 9807.68, "humidity_mean": 66.57779956427015}, "ndvi": {"peak": 0.815, "mean": 0.525, "std": 0.093}}, {"id": "CB_IN_021", "state": "IN", "region": "corn_belt", "crop": "corn", "area_acres": 12806.08, "lat": 41.386848, "lon": -85.104345, "soil": {"type": "Brockhaven", "om_pct": 2.96, "ph": 6.87, "drainage": "Well drained", "clay_pct": 20.4, "bulk_density": 1.57}, "weather": {"temp_mean": 20.29980392156863, "precip_total": 1201.48, "solar_total": 9235.97, "humidity_mean": 70.61163398692811}, "ndvi": {"peak": 0.759, "mean": 0.437, "std": 0.189}}, {"id": "CB_IN_022", "state": "IN", "region": "corn_belt", "crop": "corn", "area_acres": 5877.68, "lat": 40.342652, "lon": -88.056437, "soil": {"type": "Cisne", "om_pct": 3.24, "ph": 6.48, "drainage": "Poorly drained", "clay_pct": 25.5, "bulk_density": 1.33}, "weather": {"temp_mean": 21.59790849673203, "precip_total": 1271.27, "solar_total": 9449.6, "humidity_mean": 69.42474945533769}, "ndvi": {"peak": 0.79, "mean": 0.528, "std": 0.089}}, {"id": "CB_IN_023", "state": "IN", "region": "corn_belt", "crop": "corn", "area_acres": 8590.43, "lat": 41.083054, "lon": -86.598519, "soil": {"type": "Blount", "om_pct": 3.01, "ph": 6.97, "drainage": "Somewhat poorly drained", "clay_pct": 25.2, "bulk_density": 1.52}, "weather": {"temp_mean": 21.395599128540304, "precip_total": 1253.99, "solar_total": 9222.65, "humidity_mean": 67.00908496732026}, "ndvi": {"peak": 0.735, "mean": 0.558, "std": 0.156}}, {"id": "CB_OH_024", "state": "OH", "region": "corn_belt", "crop": "soybeans", "area_acres": 8038.15, "lat": 38.98766, "lon": -82.08233, "soil": {"type": "Pewamo", "om_pct": 4.82, "ph": 7.02, "drainage": "Poorly drained", "clay_pct": 38.4, "bulk_density": 1.64}, "weather": {"temp_mean": 22.59254901960784, "precip_total": 1228.15, "solar_total": 9217.2, "humidity_mean": 67.46501089324619}, "ndvi": {"peak": 0.877, "mean": 0.602, "std": 0.145}}, {"id": "CB_MO_025", "state": "MO", "region": "corn_belt", "crop": "soybeans", "area_acres": 12030.03, "lat": 40.271414, "lon": -91.607374, "soil": {"type": "Webster", "om_pct": 4.5, "ph": 6.62, "drainage": "Poorly drained", "clay_pct": 24.1, "bulk_density": 1.52}, "weather": {"temp_mean": 22.81993464052288, "precip_total": 1150.28, "solar_total": 9618.94, "humidity_mean": 66.1861220043573}, "ndvi": {"peak": 0.824, "mean": 0.492, "std": 0.107}}, {"id": "CB_OH_026", "state": "OH", "region": "corn_belt", "crop": "soybeans", "area_acres": 1123.49, "lat": 40.685239, "lon": -83.317465, "soil": {"type": "Pewamo", "om_pct": 3.97, "ph": 7.18, "drainage": "Poorly drained", "clay_pct": 35.6, "bulk_density": 1.4}, "weather": {"temp_mean": 20.722418300653597, "precip_total": 1264.25, "solar_total": 9356.92, "humidity_mean": 70.98488017429194}, "ndvi": {"peak": 0.805, "mean": 0.487, "std": 0.141}}, {"id": "CB_OH_027", "state": "OH", "region": "corn_belt", "crop": "soybeans", "area_acres": 17967.69, "lat": 39.264542, "lon": -82.83396, "soil": {"type": "Canisteo", "om_pct": 3.03, "ph": 6.64, "drainage": "Poorly drained", "clay_pct": 30.4, "bulk_density": 1.53}, "weather": {"temp_mean": 21.78954248366013, "precip_total": 1252.72, "solar_total": 9204.54, "humidity_mean": 69.65350762527233}, "ndvi": {"peak": 0.656, "mean": 0.42, "std": 0.193}}, {"id": "CB_IL_028", "state": "IL", "region": "corn_belt", "crop": "corn", "area_acres": 1163.33, "lat": 41.980456, "lon": -90.227986, "soil": {"type": "Hoytville", "om_pct": 2.62, "ph": 6.88, "drainage": "Poorly drained", "clay_pct": 34.8, "bulk_density": 1.69}, "weather": {"temp_mean": 20.792461873638345, "precip_total": 1377.63, "solar_total": 9504.14, "humidity_mean": 71.48159041394337}, "ndvi": {"peak": 0.814, "mean": 0.544, "std": 0.197}}, {"id": "CB_IA_029", "state": "IA", "region": "corn_belt", "crop": "corn", "area_acres": 17194.86, "lat": 41.781323, "lon": -91.182904, "soil": {"type": "Cisne", "om_pct": 2.87, "ph": 6.32, "drainage": "Poorly drained", "clay_pct": 31.9, "bulk_density": 1.35}, "weather": {"temp_mean": 21.20854030501089, "precip_total": 1282.3, "solar_total": 9556.7, "humidity_mean": 68.90183006535948}, "ndvi": {"peak": 0.663, "mean": 0.484, "std": 0.114}}, {"id": "CB_IN_030", "state": "IN", "region": "corn_belt", "crop": "corn", "area_acres": 2992.54, "lat": 39.43932, "lon": -85.730256, "soil": {"type": "Nicollet", "om_pct": 3.6, "ph": 7.12, "drainage": "Somewhat poorly drained", "clay_pct": 28.7, "bulk_density": 1.38}, "weather": {"temp_mean": 21.72797385620915, "precip_total": 1308.17, "solar_total": 9437.0, "humidity_mean": 71.12291938997821}, "ndvi": {"peak": 0.752, "mean": 0.425, "std": 0.113}}, {"id": "CB_IN_031", "state": "IN", "region": "corn_belt", "crop": "soybeans", "area_acres": 5195.2, "lat": 38.375057, "lon": -86.267592, "soil": {"type": "Blount", "om_pct": 2.8, "ph": 6.44, "drainage": "Somewhat poorly drained", "clay_pct": 25.4, "bulk_density": 1.59}, "weather": {"temp_mean": 22.930217864923748, "precip_total": 1378.88, "solar_total": 9472.86, "humidity_mean": 70.31287581699347}, "ndvi": {"peak": 0.66, "mean": 0.467, "std": 0.198}}, {"id": "CB_IA_032", "state": "IA", "region": "corn_belt", "crop": "soybeans", "area_acres": 7081.37, "lat": 43.387342, "lon": -94.863415, "soil": {"type": "Canisteo", "om_pct": 3.19, "ph": 6.6, "drainage": "Poorly drained", "clay_pct": 29.9, "bulk_density": 1.61}, "weather": {"temp_mean": 20.690522875816995, "precip_total": 1331.93, "solar_total": 9392.69, "humidity_mean": 65.97712418300654}, "ndvi": {"peak": 0.768, "mean": 0.47, "std": 0.167}}, {"id": "CB_IA_033", "state": "IA", "region": "corn_belt", "crop": "corn", "area_acres": 9735.21, "lat": 41.354521, "lon": -96.260235, "soil": {"type": "Canisteo", "om_pct": 3.88, "ph": 6.6, "drainage": "Poorly drained", "clay_pct": 31.2, "bulk_density": 1.33}, "weather": {"temp_mean": 23.00041394335512, "precip_total": 1144.54, "solar_total": 9802.96, "humidity_mean": 61.350174291939}, "ndvi": {"peak": 0.839, "mean": 0.558, "std": 0.091}}, {"id": "CB_IL_034", "state": "IL", "region": "corn_belt", "crop": "soybeans", "area_acres": 18843.85, "lat": 37.757394, "lon": -90.385414, "soil": {"type": "Miami", "om_pct": 2.5, "ph": 6.61, "drainage": "Well drained", "clay_pct": 27.2, "bulk_density": 1.6}, "weather": {"temp_mean": 23.282331154684098, "precip_total": 1542.45, "solar_total": 9592.88, "humidity_mean": 70.10392156862746}, "ndvi": {"peak": 0.68, "mean": 0.446, "std": 0.151}}, {"id": "CB_IN_035", "state": "IN", "region": "corn_belt", "crop": "soybeans", "area_acres": 21689.77, "lat": 38.079579, "lon": -86.542189, "soil": {"type": "Pewamo", "om_pct": 4.0, "ph": 7.04, "drainage": "Poorly drained", "clay_pct": 39.0, "bulk_density": 1.38}, "weather": {"temp_mean": 23.253616557734205, "precip_total": 1471.59, "solar_total": 9472.86, "humidity_mean": 70.50692810457517}, "ndvi": {"peak": 0.604, "mean": 0.445, "std": 0.157}}, {"id": "CB_OH_036", "state": "OH", "region": "corn_belt", "crop": "corn", "area_acres": 12996.54, "lat": 41.165669, "lon": -83.54945, "soil": {"type": "Webster", "om_pct": 4.02, "ph": 6.1, "drainage": "Poorly drained", "clay_pct": 28.6, "bulk_density": 1.39}, "weather": {"temp_mean": 20.952788671023963, "precip_total": 1159.05, "solar_total": 9260.94, "humidity_mean": 69.58178649237473}, "ndvi": {"peak": 0.773, "mean": 0.477, "std": 0.097}}, {"id": "CB_MO_037", "state": "MO", "region": "corn_belt", "crop": "soybeans", "area_acres": 15726.11, "lat": 40.433693, "lon": -92.907641, "soil": {"type": "Webster", "om_pct": 3.03, "ph": 6.19, "drainage": "Poorly drained", "clay_pct": 20.3, "bulk_density": 1.47}, "weather": {"temp_mean": 22.34952069716776, "precip_total": 1234.39, "solar_total": 9570.47, "humidity_mean": 67.56912854030502}, "ndvi": {"peak": 0.628, "mean": 0.484, "std": 0.111}}, {"id": "CB_IA_038", "state": "IA", "region": "corn_belt", "crop": "corn", "area_acres": 632.72, "lat": 41.46234, "lon": -95.28763, "soil": {"type": "Blount", "om_pct": 3.2, "ph": 6.61, "drainage": "Somewhat poorly drained", "clay_pct": 22.7, "bulk_density": 1.4}, "weather": {"temp_mean": 22.14398692810457, "precip_total": 1204.97, "solar_total": 9781.32, "humidity_mean": 63.80679738562092}, "ndvi": {"peak": 0.88, "mean": 0.589, "std": 0.109}}, {"id": "CB_OH_039", "state": "OH", "region": "corn_belt", "crop": "soybeans", "area_acres": 7407.95, "lat": 40.871475, "lon": -84.433649, "soil": {"type": "Hoytville", "om_pct": 2.9, "ph": 6.99, "drainage": "Poorly drained", "clay_pct": 31.3, "bulk_density": 1.64}, "weather": {"temp_mean": 20.9879302832244, "precip_total": 1176.88, "solar_total": 9380.79, "humidity_mean": 69.85490196078432}, "ndvi": {"peak": 0.824, "mean": 0.501, "std": 0.121}}, {"id": "CB_IN_040", "state": "IN", "region": "corn_belt", "crop": "soybeans", "area_acres": 11921.2, "lat": 40.080691, "lon": -87.802534, "soil": {"type": "Cisne", "om_pct": 3.1, "ph": 6.18, "drainage": "Poorly drained", "clay_pct": 28.4, "bulk_density": 1.5}, "weather": {"temp_mean": 22.065359477124183, "precip_total": 1247.53, "solar_total": 9413.23, "humidity_mean": 68.88076252723312}, "ndvi": {"peak": 0.86, "mean": 0.596, "std": 0.174}}, {"id": "CB_IL_041", "state": "IL", "region": "corn_belt", "crop": "soybeans", "area_acres": 1193.69, "lat": 38.187605, "lon": -90.135735, "soil": {"type": "Clarion", "om_pct": 2.77, "ph": 7.12, "drainage": "Well drained", "clay_pct": 19.9, "bulk_density": 1.59}, "weather": {"temp_mean": 23.50037037037037, "precip_total": 1493.41, "solar_total": 9585.55, "humidity_mean": 70.75945533769064}, "ndvi": {"peak": 0.621, "mean": 0.458, "std": 0.153}}, {"id": "CB_IL_042", "state": "IL", "region": "corn_belt", "crop": "corn", "area_acres": 21557.41, "lat": 38.64275, "lon": -90.80018, "soil": {"type": "Hoytville", "om_pct": 2.79, "ph": 6.56, "drainage": "Poorly drained", "clay_pct": 33.0, "bulk_density": 1.48}, "weather": {"temp_mean": 23.402527233115467, "precip_total": 1575.9, "solar_total": 9585.55, "humidity_mean": 69.7839651416122}, "ndvi": {"peak": 0.722, "mean": 0.473, "std": 0.099}}, {"id": "CB_OH_043", "state": "OH", "region": "corn_belt", "crop": "soybeans", "area_acres": 20926.43, "lat": 39.412902, "lon": -80.514985, "soil": {"type": "Webster", "om_pct": 3.06, "ph": 7.14, "drainage": "Poorly drained", "clay_pct": 30.5, "bulk_density": 1.62}, "weather": {"temp_mean": 21.308126361655773, "precip_total": 1331.09, "solar_total": 9079.06, "humidity_mean": 69.95917211328975}, "ndvi": {"peak": 0.773, "mean": 0.486, "std": 0.165}}, {"id": "CB_MO_044", "state": "MO", "region": "corn_belt", "crop": "corn", "area_acres": 3127.79, "lat": 40.030545, "lon": -94.273404, "soil": {"type": "Brockhaven", "om_pct": 1.56, "ph": 6.01, "drainage": "Well drained", "clay_pct": 19.3, "bulk_density": 1.39}, "weather": {"temp_mean": 22.940392156862742, "precip_total": 1473.41, "solar_total": 9713.98, "humidity_mean": 67.48688453159042}, "ndvi": {"peak": 0.772, "mean": 0.543, "std": 0.182}}, {"id": "CB_IN_045", "state": "IN", "region": "corn_belt", "crop": "soybeans", "area_acres": 5207.73, "lat": 40.886645, "lon": -85.074703, "soil": {"type": "Miami", "om_pct": 2.06, "ph": 7.29, "drainage": "Well drained", "clay_pct": 26.0, "bulk_density": 1.51}, "weather": {"temp_mean": 20.86644880174292, "precip_total": 1169.68, "solar_total": 9379.15, "humidity_mean": 69.89919389978213}, "ndvi": {"peak": 0.742, "mean": 0.459, "std": 0.112}}, {"id": "CB_IA_046", "state": "IA", "region": "corn_belt", "crop": "soybeans", "area_acres": 14734.41, "lat": 43.052785, "lon": -90.418373, "soil": {"type": "Nicollet", "om_pct": 4.93, "ph": 7.31, "drainage": "Somewhat poorly drained", "clay_pct": 27.2, "bulk_density": 1.46}, "weather": {"temp_mean": 20.043289760348586, "precip_total": 1420.88, "solar_total": 9116.07, "humidity_mean": 72.3312854030501}, "ndvi": {"peak": 0.843, "mean": 0.498, "std": 0.156}}, {"id": "CB_OH_047", "state": "OH", "region": "corn_belt", "crop": "soybeans", "area_acres": 11159.45, "lat": 38.53219, "lon": -84.094114, "soil": {"type": "Cisne", "om_pct": 2.78, "ph": 6.79, "drainage": "Poorly drained", "clay_pct": 27.0, "bulk_density": 1.4}, "weather": {"temp_mean": 22.56605664488017, "precip_total": 1349.56, "solar_total": 9348.49, "humidity_mean": 70.97549019607843}, "ndvi": {"peak": 0.726, "mean": 0.502, "std": 0.103}}, {"id": "CB_MO_048", "state": "MO", "region": "corn_belt", "crop": "soybeans", "area_acres": 11948.24, "lat": 37.143232, "lon": -91.93323, "soil": {"type": "Clarion", "om_pct": 3.62, "ph": 6.09, "drainage": "Well drained", "clay_pct": 18.1, "bulk_density": 1.41}, "weather": {"temp_mean": 23.421132897603485, "precip_total": 1528.16, "solar_total": 9694.25, "humidity_mean": 71.74607843137254}, "ndvi": {"peak": 0.67, "mean": 0.456, "std": 0.101}}, {"id": "CB_MO_049", "state": "MO", "region": "corn_belt", "crop": "corn", "area_acres": 7008.58, "lat": 37.203701, "lon": -95.38251, "soil": {"type": "Canisteo", "om_pct": 3.47, "ph": 6.55, "drainage": "Poorly drained", "clay_pct": 24.7, "bulk_density": 1.63}, "weather": {"temp_mean": 25.72023965141612, "precip_total": 1399.02, "solar_total": 10081.39, "humidity_mean": 64.14583877995642}, "ndvi": {"peak": 0.91, "mean": 0.635, "std": 0.082}}, {"id": "CB_OH_050", "state": "OH", "region": "corn_belt", "crop": "soybeans", "area_acres": 10999.23, "lat": 40.773715, "lon": -81.103106, "soil": {"type": "Brockhaven", "om_pct": 2.86, "ph": 6.84, "drainage": "Well drained", "clay_pct": 22.6, "bulk_density": 1.43}, "weather": {"temp_mean": 20.4240522875817, "precip_total": 1158.82, "solar_total": 9039.35, "humidity_mean": 69.16135076252723}, "ndvi": {"peak": 0.794, "mean": 0.638, "std": 0.182}}];
+        const MERGED_DATA = [{"field_id": "CB_OH_001", "state": "OH", "region": "corn_belt", "assigned_crop": "corn", "area_acres": 9413.64, "centroid_lat": 39.142022, "centroid_lon": -81.381236, "soil_type": "Blount", "soil_drainage": "Somewhat poorly drained", "soil_om_pct": 3.19, "soil_ph": 6.74, "soil_awc": 0.157, "soil_clay_pct": 26.0, "soil_sand_pct": 55.1, "soil_silt_pct": 18.9, "soil_bulk_density": 1.48, "soil_cec": 16.3, "gdd_temp_mean": 21.993703703703705, "gdd_temp_max": 28.47276688453159, "gdd_temp_min": 15.849934640522877, "gdd_precip_total": 1534.62, "gdd_solar_total": 9119.41, "gdd_humidity_mean": 70.54385620915033, "crop_code": 1, "cdl_crop_2024": "Corn", "dominant_pct": 87.0, "ndvi_peak": 0.909, "ndvi_mean": 0.586, "ndvi_std": 0.099}, {"field_id": "CB_IL_002", "state": "IL", "region": "corn_belt", "assigned_crop": "corn", "area_acres": 3970.78, "centroid_lat": 37.999875, "centroid_lon": -89.663004, "soil_type": "Nicollet", "soil_drainage": "Somewhat poorly drained", "soil_om_pct": 4.07, "soil_ph": 7.27, "soil_awc": 0.182, "soil_clay_pct": 28.9, "soil_sand_pct": 47.5, "soil_silt_pct": 23.6, "soil_bulk_density": 1.31, "soil_cec": 24.2, "gdd_temp_mean": 23.461786492374724, "gdd_temp_max": 29.3020697167756, "gdd_temp_min": 17.753703703703703, "gdd_precip_total": 1460.06, "gdd_solar_total": 9696.19, "gdd_humidity_mean": 71.70050108932462, "crop_code": 1, "cdl_crop_2024": "Corn", "dominant_pct": 94.4, "ndvi_peak": 0.713, "ndvi_mean": 0.526, "ndvi_std": 0.165}, {"field_id": "CB_IN_003", "state": "IN", "region": "corn_belt", "assigned_crop": "soybeans", "area_acres": 19933.86, "centroid_lat": 37.725646, "centroid_lon": -85.612005, "soil_type": "Webster", "soil_drainage": "Poorly drained", "soil_om_pct": 4.94, "soil_ph": 7.58, "soil_awc": 0.156, "soil_clay_pct": 27.2, "soil_sand_pct": 44.4, "soil_silt_pct": 28.4, "soil_bulk_density": 1.38, "soil_cec": 12.6, "gdd_temp_mean": 23.423943355119825, "gdd_temp_max": 29.116492374727667, "gdd_temp_min": 17.781960784313725, "gdd_precip_total": 1514.65, "gdd_solar_total": 9437.91, "gdd_humidity_mean": 70.79644880174291, "crop_code": 5, "cdl_crop_2024": "Soybeans", "dominant_pct": 90.6, "ndvi_peak": 0.842, "ndvi_mean": 0.475, "ndvi_std": 0.102}, {"field_id": "CB_IL_004", "state": "IL", "region": "corn_belt", "assigned_crop": "soybeans", "area_acres": 9788.55, "centroid_lat": 42.461058, "centroid_lon": -89.030074, "soil_type": "Nicollet", "soil_drainage": "Somewhat poorly drained", "soil_om_pct": 4.69, "soil_ph": 7.16, "soil_awc": 0.21, "soil_clay_pct": 27.2, "soil_sand_pct": 44.5, "soil_silt_pct": 28.3, "soil_bulk_density": 1.48, "soil_cec": 13.2, "gdd_temp_mean": 19.69607843137255, "gdd_temp_max": 25.457625272331157, "gdd_temp_min": 13.796601307189544, "gdd_precip_total": 1453.57, "gdd_solar_total": 9268.29, "gdd_humidity_mean": 73.85891067538125, "crop_code": 5, "cdl_crop_2024": "Soybeans", "dominant_pct": 93.0, "ndvi_peak": 0.676, "ndvi_mean": 0.437, "ndvi_std": 0.115}, {"field_id": "CB_MO_005", "state": "MO", "region": "corn_belt", "assigned_crop": "soybeans", "area_acres": 5121.41, "centroid_lat": 36.59225, "centroid_lon": -92.088965, "soil_type": "Nicollet", "soil_drainage": "Somewhat poorly drained", "soil_om_pct": 3.55, "soil_ph": 6.93, "soil_awc": 0.167, "soil_clay_pct": 26.1, "soil_sand_pct": 45.8, "soil_silt_pct": 28.2, "soil_bulk_density": 1.46, "soil_cec": 21.8, "gdd_temp_mean": 24.06159041394336, "gdd_temp_max": 30.60662309368192, "gdd_temp_min": 18.11019607843137, "gdd_precip_total": 1510.75, "gdd_solar_total": 9899.15, "gdd_humidity_mean": 72.07529411764705, "crop_code": 5, "cdl_crop_2024": "Soybeans", "dominant_pct": 85.8, "ndvi_peak": 0.635, "ndvi_mean": 0.441, "ndvi_std": 0.135}, {"field_id": "CB_OH_006", "state": "OH", "region": "corn_belt", "assigned_crop": "soybeans", "area_acres": 14729.25, "centroid_lat": 39.782266, "centroid_lon": -82.67572, "soil_type": "Hoytville", "soil_drainage": "Poorly drained", "soil_om_pct": 3.47, "soil_ph": 6.44, "soil_awc": 0.187, "soil_clay_pct": 28.0, "soil_sand_pct": 58.7, "soil_silt_pct": 13.3, "soil_bulk_density": 1.49, "soil_cec": 21.0, "gdd_temp_mean": 21.302875816993463, "gdd_temp_max": 27.59806100217865, "gdd_temp_min": 15.199847494553376, "gdd_precip_total": 1237.26, "gdd_solar_total": 9204.54, "gdd_humidity_mean": 69.44335511982571, "crop_code": 5, "cdl_crop_2024": "Soybeans", "dominant_pct": 90.7, "ndvi_peak": 0.65, "ndvi_mean": 0.483, "ndvi_std": 0.086}, {"field_id": "CB_IN_007", "state": "IN", "region": "corn_belt", "assigned_crop": "soybeans", "area_acres": 670.16, "centroid_lat": 39.556938, "centroid_lon": -86.130342, "soil_type": "Blount", "soil_drainage": "Somewhat poorly drained", "soil_om_pct": 2.42, "soil_ph": 7.03, "soil_awc": 0.219, "soil_clay_pct": 21.4, "soil_sand_pct": 58.8, "soil_silt_pct": 19.8, "soil_bulk_density": 1.4, "soil_cec": 20.7, "gdd_temp_mean": 22.099237472766884, "gdd_temp_max": 28.23298474945534, "gdd_temp_min": 16.054400871459695, "gdd_precip_total": 1271.51, "gdd_solar_total": 9448.36, "gdd_humidity_mean": 69.909651416122, "crop_code": 5, "cdl_crop_2024": "Soybeans", "dominant_pct": 89.1, "ndvi_peak": 0.643, "ndvi_mean": 0.458, "ndvi_std": 0.196}, {"field_id": "CB_IN_008", "state": "IN", "region": "corn_belt", "assigned_crop": "corn", "area_acres": 20312.74, "centroid_lat": 38.182096, "centroid_lon": -88.239794, "soil_type": "Nicollet", "soil_drainage": "Somewhat poorly drained", "soil_om_pct": 4.02, "soil_ph": 6.75, "soil_awc": 0.209, "soil_clay_pct": 25.2, "soil_sand_pct": 54.5, "soil_silt_pct": 20.4, "soil_bulk_density": 1.57, "soil_cec": 21.6, "gdd_temp_mean": 23.3822440087146, "gdd_temp_max": 29.037429193899783, "gdd_temp_min": 17.763769063180828, "gdd_precip_total": 1496.48, "gdd_solar_total": 9650.85, "gdd_humidity_mean": 72.2229411764706, "crop_code": 5, "cdl_crop_2024": "Soybeans", "dominant_pct": 96.6, "ndvi_peak": 0.676, "ndvi_mean": 0.47, "ndvi_std": 0.133}, {"field_id": "CB_OH_009", "state": "OH", "region": "corn_belt", "assigned_crop": "soybeans", "area_acres": 1056.74, "centroid_lat": 41.329391, "centroid_lon": -83.281545, "soil_type": "Canisteo", "soil_drainage": "Poorly drained", "soil_om_pct": 3.83, "soil_ph": 6.84, "soil_awc": 0.213, "soil_clay_pct": 24.9, "soil_sand_pct": 61.8, "soil_silt_pct": 13.2, "soil_bulk_density": 1.54, "soil_cec": 12.1, "gdd_temp_mean": 21.079368191721134, "gdd_temp_max": 25.918257080610022, "gdd_temp_min": 16.27442265795207, "gdd_precip_total": 1142.41, "gdd_solar_total": 9260.94, "gdd_humidity_mean": 69.85063180827886, "crop_code": 5, "cdl_crop_2024": "Soybeans", "dominant_pct": 90.1, "ndvi_peak": 0.724, "ndvi_mean": 0.438, "ndvi_std": 0.111}, {"field_id": "CB_OH_010", "state": "OH", "region": "corn_belt", "assigned_crop": "soybeans", "area_acres": 7036.38, "centroid_lat": 40.040534, "centroid_lon": -84.011847, "soil_type": "Nicollet", "soil_drainage": "Somewhat poorly drained", "soil_om_pct": 4.45, "soil_ph": 6.74, "soil_awc": 0.213, "soil_clay_pct": 29.8, "soil_sand_pct": 50.4, "soil_silt_pct": 19.7, "soil_bulk_density": 1.47, "soil_cec": 16.6, "gdd_temp_mean": 21.045337690631808, "gdd_temp_max": 26.82954248366013, "gdd_temp_min": 15.154596949891069, "gdd_precip_total": 1260.14, "gdd_solar_total": 9380.79, "gdd_humidity_mean": 71.05143790849674, "crop_code": 5, "cdl_crop_2024": "Soybeans", "dominant_pct": 88.9, "ndvi_peak": 0.678, "ndvi_mean": 0.479, "ndvi_std": 0.102}, {"field_id": "CB_IN_011", "state": "IN", "region": "corn_belt", "assigned_crop": "soybeans", "area_acres": 13808.77, "centroid_lat": 39.064242, "centroid_lon": -87.771056, "soil_type": "Nicollet", "soil_drainage": "Somewhat poorly drained", "soil_om_pct": 4.97, "soil_ph": 6.48, "soil_awc": 0.184, "soil_clay_pct": 23.5, "soil_sand_pct": 61.1, "soil_silt_pct": 15.4, "soil_bulk_density": 1.45, "soil_cec": 17.1, "gdd_temp_mean": 22.62662309368192, "gdd_temp_max": 28.33917211328976, "gdd_temp_min": 16.834727668845318, "gdd_precip_total": 1446.62, "gdd_solar_total": 9519.93, "gdd_humidity_mean": 72.03936819172114, "crop_code": 5, "cdl_crop_2024": "Soybeans", "dominant_pct": 95.6, "ndvi_peak": 0.794, "ndvi_mean": 0.575, "ndvi_std": 0.152}, {"field_id": "CB_IL_012", "state": "IL", "region": "corn_belt", "assigned_crop": "soybeans", "area_acres": 14415.86, "centroid_lat": 38.424272, "centroid_lon": -87.621661, "soil_type": "Pewamo", "soil_drainage": "Poorly drained", "soil_om_pct": 4.83, "soil_ph": 7.16, "soil_awc": 0.199, "soil_clay_pct": 39.6, "soil_sand_pct": 37.4, "soil_silt_pct": 23.0, "soil_bulk_density": 1.62, "soil_cec": 23.6, "gdd_temp_mean": 22.941960784313725, "gdd_temp_max": 28.50111111111111, "gdd_temp_min": 17.345555555555556, "gdd_precip_total": 1494.06, "gdd_solar_total": 9592.86, "gdd_humidity_mean": 72.7365577342048, "crop_code": 5, "cdl_crop_2024": "Soybeans", "dominant_pct": 96.9, "ndvi_peak": 0.622, "ndvi_mean": 0.439, "ndvi_std": 0.119}, {"field_id": "CB_IL_013", "state": "IL", "region": "corn_belt", "assigned_crop": "soybeans", "area_acres": 19329.81, "centroid_lat": 41.974137, "centroid_lon": -89.1084, "soil_type": "Brockhaven", "soil_drainage": "Well drained", "soil_om_pct": 2.19, "soil_ph": 6.52, "soil_awc": 0.16, "soil_clay_pct": 19.1, "soil_sand_pct": 56.9, "soil_silt_pct": 24.0, "soil_bulk_density": 1.35, "soil_cec": 24.6, "gdd_temp_mean": 20.512723311546843, "gdd_temp_max": 26.39505446623094, "gdd_temp_min": 14.513202614379086, "gdd_precip_total": 1379.65, "gdd_solar_total": 9471.01, "gdd_humidity_mean": 71.95668845315905, "crop_code": 5, "cdl_crop_2024": "Soybeans", "dominant_pct": 94.5, "ndvi_peak": 0.668, "ndvi_mean": 0.466, "ndvi_std": 0.114}, {"field_id": "CB_OH_014", "state": "OH", "region": "corn_belt", "assigned_crop": "corn", "area_acres": 13565.59, "centroid_lat": 41.864102, "centroid_lon": -81.121865, "soil_type": "Brockhaven", "soil_drainage": "Well drained", "soil_om_pct": 2.46, "soil_ph": 6.38, "soil_awc": 0.153, "soil_clay_pct": 19.4, "soil_sand_pct": 56.0, "soil_silt_pct": 24.6, "soil_bulk_density": 1.53, "soil_cec": 14.1, "gdd_temp_mean": 19.788169934640525, "gdd_temp_max": 21.36579520697168, "gdd_temp_min": 18.216993464052287, "gdd_precip_total": 1086.6, "gdd_solar_total": 8990.62, "gdd_humidity_mean": 75.1780174291939, "crop_code": 5, "cdl_crop_2024": "Soybeans", "dominant_pct": 92.3, "ndvi_peak": 0.635, "ndvi_mean": 0.453, "ndvi_std": 0.198}, {"field_id": "CB_MO_015", "state": "MO", "region": "corn_belt", "assigned_crop": "soybeans", "area_acres": 8104.45, "centroid_lat": 37.927013, "centroid_lon": -93.673926, "soil_type": "Canisteo", "soil_drainage": "Poorly drained", "soil_om_pct": 3.06, "soil_ph": 6.63, "soil_awc": 0.161, "soil_clay_pct": 33.4, "soil_sand_pct": 43.4, "soil_silt_pct": 23.2, "soil_bulk_density": 1.33, "soil_cec": 20.4, "gdd_temp_mean": 24.5099128540305, "gdd_temp_max": 30.81350762527233, "gdd_temp_min": 18.485599128540304, "gdd_precip_total": 1487.82, "gdd_solar_total": 9942.54, "gdd_humidity_mean": 66.92736383442266, "crop_code": 5, "cdl_crop_2024": "Soybeans", "dominant_pct": 87.6, "ndvi_peak": 0.65, "ndvi_mean": 0.461, "ndvi_std": 0.165}, {"field_id": "CB_IA_016", "state": "IA", "region": "corn_belt", "assigned_crop": "corn", "area_acres": 21736.87, "centroid_lat": 42.906591, "centroid_lon": -96.015421, "soil_type": "Nicollet", "soil_drainage": "Somewhat poorly drained", "soil_om_pct": 4.43, "soil_ph": 6.83, "soil_awc": 0.174, "soil_clay_pct": 25.1, "soil_sand_pct": 51.3, "soil_silt_pct": 23.6, "soil_bulk_density": 1.4, "soil_cec": 18.4, "gdd_temp_mean": 21.79771241830065, "gdd_temp_max": 28.335904139433552, "gdd_temp_min": 15.356557734204792, "gdd_precip_total": 1111.48, "gdd_solar_total": 9682.65, "gdd_humidity_mean": 61.48651416122004, "crop_code": 1, "cdl_crop_2024": "Corn", "dominant_pct": 92.0, "ndvi_peak": 0.87, "ndvi_mean": 0.554, "ndvi_std": 0.094}, {"field_id": "CB_IA_017", "state": "IA", "region": "corn_belt", "assigned_crop": "soybeans", "area_acres": 2077.84, "centroid_lat": 41.380465, "centroid_lon": -96.408481, "soil_type": "Clarion", "soil_drainage": "Well drained", "soil_om_pct": 3.86, "soil_ph": 6.78, "soil_awc": 0.185, "soil_clay_pct": 21.8, "soil_sand_pct": 57.5, "soil_silt_pct": 20.7, "soil_bulk_density": 1.46, "soil_cec": 15.9, "gdd_temp_mean": 23.00041394335512, "gdd_temp_max": 29.977538126361654, "gdd_temp_min": 16.36986928104575, "gdd_precip_total": 1144.54, "gdd_solar_total": 9802.96, "gdd_humidity_mean": 61.350174291939, "crop_code": 1, "cdl_crop_2024": "Corn", "dominant_pct": 95.5, "ndvi_peak": 0.837, "ndvi_mean": 0.559, "ndvi_std": 0.117}, {"field_id": "CB_IN_018", "state": "IN", "region": "corn_belt", "assigned_crop": "corn", "area_acres": 4384.27, "centroid_lat": 40.585081, "centroid_lon": -88.203821, "soil_type": "Blount", "soil_drainage": "Somewhat poorly drained", "soil_om_pct": 2.14, "soil_ph": 6.67, "soil_awc": 0.212, "soil_clay_pct": 25.5, "soil_sand_pct": 55.7, "soil_silt_pct": 18.8, "soil_bulk_density": 1.44, "soil_cec": 13.5, "gdd_temp_mean": 21.59790849673203, "gdd_temp_max": 27.81880174291939, "gdd_temp_min": 15.432832244008717, "gdd_precip_total": 1271.27, "gdd_solar_total": 9449.6, "gdd_humidity_mean": 69.42474945533769, "crop_code": 5, "cdl_crop_2024": "Soybeans", "dominant_pct": 89.2, "ndvi_peak": 0.782, "ndvi_mean": 0.504, "ndvi_std": 0.137}, {"field_id": "CB_IA_019", "state": "IA", "region": "corn_belt", "assigned_crop": "soybeans", "area_acres": 3925.13, "centroid_lat": 43.08931, "centroid_lon": -92.448562, "soil_type": "Hoytville", "soil_drainage": "Poorly drained", "soil_om_pct": 3.39, "soil_ph": 6.86, "soil_awc": 0.199, "soil_clay_pct": 29.8, "soil_sand_pct": 52.6, "soil_silt_pct": 17.6, "soil_bulk_density": 1.4, "soil_cec": 16.3, "gdd_temp_mean": 20.401045751633987, "gdd_temp_max": 26.228867102396517, "gdd_temp_min": 14.483769063180828, "gdd_precip_total": 1437.2, "gdd_solar_total": 9328.87, "gdd_humidity_mean": 70.13429193899782, "crop_code": 5, "cdl_crop_2024": "Soybeans", "dominant_pct": 89.6, "ndvi_peak": 0.778, "ndvi_mean": 0.479, "ndvi_std": 0.173}, {"field_id": "CB_MO_020", "state": "MO", "region": "corn_belt", "assigned_crop": "corn", "area_acres": 8541.81, "centroid_lat": 38.865191, "centroid_lon": -93.714308, "soil_type": "Brockhaven", "soil_drainage": "Well drained", "soil_om_pct": 1.57, "soil_ph": 6.89, "soil_awc": 0.155, "soil_clay_pct": 17.5, "soil_sand_pct": 58.6, "soil_silt_pct": 23.9, "soil_bulk_density": 1.37, "soil_cec": 14.8, "gdd_temp_mean": 23.888758169934643, "gdd_temp_max": 30.348540305010893, "gdd_temp_min": 17.706623093681916, "gdd_precip_total": 1327.52, "gdd_solar_total": 9807.68, "gdd_humidity_mean": 66.57779956427015, "crop_code": 1, "cdl_crop_2024": "Corn", "dominant_pct": 89.4, "ndvi_peak": 0.815, "ndvi_mean": 0.525, "ndvi_std": 0.093}, {"field_id": "CB_IN_021", "state": "IN", "region": "corn_belt", "assigned_crop": "corn", "area_acres": 12806.08, "centroid_lat": 41.386848, "centroid_lon": -85.104345, "soil_type": "Brockhaven", "soil_drainage": "Well drained", "soil_om_pct": 2.96, "soil_ph": 6.87, "soil_awc": 0.207, "soil_clay_pct": 20.4, "soil_sand_pct": 63.4, "soil_silt_pct": 16.2, "soil_bulk_density": 1.57, "soil_cec": 14.1, "gdd_temp_mean": 20.29980392156863, "gdd_temp_max": 26.494466230936816, "gdd_temp_min": 14.123790849673204, "gdd_precip_total": 1201.48, "gdd_solar_total": 9235.97, "gdd_humidity_mean": 70.61163398692811, "crop_code": 5, "cdl_crop_2024": "Soybeans", "dominant_pct": 97.5, "ndvi_peak": 0.759, "ndvi_mean": 0.437, "ndvi_std": 0.189}, {"field_id": "CB_IN_022", "state": "IN", "region": "corn_belt", "assigned_crop": "corn", "area_acres": 5877.68, "centroid_lat": 40.342652, "centroid_lon": -88.056437, "soil_type": "Cisne", "soil_drainage": "Poorly drained", "soil_om_pct": 3.24, "soil_ph": 6.48, "soil_awc": 0.151, "soil_clay_pct": 25.5, "soil_sand_pct": 61.8, "soil_silt_pct": 12.7, "soil_bulk_density": 1.33, "soil_cec": 21.0, "gdd_temp_mean": 21.59790849673203, "gdd_temp_max": 27.81880174291939, "gdd_temp_min": 15.432832244008717, "gdd_precip_total": 1271.27, "gdd_solar_total": 9449.6, "gdd_humidity_mean": 69.42474945533769, "crop_code": 1, "cdl_crop_2024": "Corn", "dominant_pct": 91.5, "ndvi_peak": 0.79, "ndvi_mean": 0.528, "ndvi_std": 0.089}, {"field_id": "CB_IN_023", "state": "IN", "region": "corn_belt", "assigned_crop": "corn", "area_acres": 8590.43, "centroid_lat": 41.083054, "centroid_lon": -86.598519, "soil_type": "Blount", "soil_drainage": "Somewhat poorly drained", "soil_om_pct": 3.01, "soil_ph": 6.97, "soil_awc": 0.189, "soil_clay_pct": 25.2, "soil_sand_pct": 47.8, "soil_silt_pct": 27.0, "soil_bulk_density": 1.52, "soil_cec": 23.4, "gdd_temp_mean": 21.395599128540304, "gdd_temp_max": 27.55834422657952, "gdd_temp_min": 15.150849673202616, "gdd_precip_total": 1253.99, "gdd_solar_total": 9222.65, "gdd_humidity_mean": 67.00908496732026, "crop_code": 1, "cdl_crop_2024": "Corn", "dominant_pct": 90.8, "ndvi_peak": 0.735, "ndvi_mean": 0.558, "ndvi_std": 0.156}, {"field_id": "CB_OH_024", "state": "OH", "region": "corn_belt", "assigned_crop": "soybeans", "area_acres": 8038.15, "centroid_lat": 38.98766, "centroid_lon": -82.08233, "soil_type": "Pewamo", "soil_drainage": "Poorly drained", "soil_om_pct": 4.82, "soil_ph": 7.02, "soil_awc": 0.182, "soil_clay_pct": 38.4, "soil_sand_pct": 35.7, "soil_silt_pct": 25.9, "soil_bulk_density": 1.64, "soil_cec": 22.0, "gdd_temp_mean": 22.59254901960784, "gdd_temp_max": 29.203420479302835, "gdd_temp_min": 16.37627450980392, "gdd_precip_total": 1228.15, "gdd_solar_total": 9217.2, "gdd_humidity_mean": 67.46501089324619, "crop_code": 1, "cdl_crop_2024": "Corn", "dominant_pct": 89.8, "ndvi_peak": 0.877, "ndvi_mean": 0.602, "ndvi_std": 0.145}, {"field_id": "CB_MO_025", "state": "MO", "region": "corn_belt", "assigned_crop": "soybeans", "area_acres": 12030.03, "centroid_lat": 40.271414, "centroid_lon": -91.607374, "soil_type": "Webster", "soil_drainage": "Poorly drained", "soil_om_pct": 4.5, "soil_ph": 6.62, "soil_awc": 0.152, "soil_clay_pct": 24.1, "soil_sand_pct": 58.9, "soil_silt_pct": 17.0, "soil_bulk_density": 1.52, "soil_cec": 18.9, "gdd_temp_mean": 22.81993464052288, "gdd_temp_max": 29.210958605664487, "gdd_temp_min": 16.577189542483662, "gdd_precip_total": 1150.28, "gdd_solar_total": 9618.94, "gdd_humidity_mean": 66.1861220043573, "crop_code": 5, "cdl_crop_2024": "Soybeans", "dominant_pct": 87.4, "ndvi_peak": 0.824, "ndvi_mean": 0.492, "ndvi_std": 0.107}, {"field_id": "CB_OH_026", "state": "OH", "region": "corn_belt", "assigned_crop": "soybeans", "area_acres": 1123.49, "centroid_lat": 40.685239, "centroid_lon": -83.317465, "soil_type": "Pewamo", "soil_drainage": "Poorly drained", "soil_om_pct": 3.97, "soil_ph": 7.18, "soil_awc": 0.153, "soil_clay_pct": 35.6, "soil_sand_pct": 39.5, "soil_silt_pct": 24.9, "soil_bulk_density": 1.4, "soil_cec": 21.3, "gdd_temp_mean": 20.722418300653597, "gdd_temp_max": 26.611350762527238, "gdd_temp_min": 14.78074074074074, "gdd_precip_total": 1264.25, "gdd_solar_total": 9356.92, "gdd_humidity_mean": 70.98488017429194, "crop_code": 5, "cdl_crop_2024": "Soybeans", "dominant_pct": 86.3, "ndvi_peak": 0.805, "ndvi_mean": 0.487, "ndvi_std": 0.141}, {"field_id": "CB_OH_027", "state": "OH", "region": "corn_belt", "assigned_crop": "soybeans", "area_acres": 17967.69, "centroid_lat": 39.264542, "centroid_lon": -82.83396, "soil_type": "Canisteo", "soil_drainage": "Poorly drained", "soil_om_pct": 3.03, "soil_ph": 6.64, "soil_awc": 0.189, "soil_clay_pct": 30.4, "soil_sand_pct": 44.8, "soil_silt_pct": 24.7, "soil_bulk_density": 1.53, "soil_cec": 19.3, "gdd_temp_mean": 21.78954248366013, "gdd_temp_max": 27.77769063180828, "gdd_temp_min": 15.79562091503268, "gdd_precip_total": 1252.72, "gdd_solar_total": 9204.54, "gdd_humidity_mean": 69.65350762527233, "crop_code": 5, "cdl_crop_2024": "Soybeans", "dominant_pct": 97.0, "ndvi_peak": 0.656, "ndvi_mean": 0.42, "ndvi_std": 0.193}, {"field_id": "CB_IL_028", "state": "IL", "region": "corn_belt", "assigned_crop": "corn", "area_acres": 1163.33, "centroid_lat": 41.980456, "centroid_lon": -90.227986, "soil_type": "Hoytville", "soil_drainage": "Poorly drained", "soil_om_pct": 2.62, "soil_ph": 6.88, "soil_awc": 0.178, "soil_clay_pct": 34.8, "soil_sand_pct": 52.9, "soil_silt_pct": 12.2, "soil_bulk_density": 1.69, "soil_cec": 23.3, "gdd_temp_mean": 20.792461873638345, "gdd_temp_max": 26.666928104575167, "gdd_temp_min": 14.794989106753812, "gdd_precip_total": 1377.63, "gdd_solar_total": 9504.14, "gdd_humidity_mean": 71.48159041394337, "crop_code": 1, "cdl_crop_2024": "Corn", "dominant_pct": 98.0, "ndvi_peak": 0.814, "ndvi_mean": 0.544, "ndvi_std": 0.197}, {"field_id": "CB_IA_029", "state": "IA", "region": "corn_belt", "assigned_crop": "corn", "area_acres": 17194.86, "centroid_lat": 41.781323, "centroid_lon": -91.182904, "soil_type": "Cisne", "soil_drainage": "Poorly drained", "soil_om_pct": 2.87, "soil_ph": 6.32, "soil_awc": 0.174, "soil_clay_pct": 31.9, "soil_sand_pct": 57.0, "soil_silt_pct": 11.0, "soil_bulk_density": 1.35, "soil_cec": 12.8, "gdd_temp_mean": 21.20854030501089, "gdd_temp_max": 27.22525054466231, "gdd_temp_min": 15.156252723311548, "gdd_precip_total": 1282.3, "gdd_solar_total": 9556.7, "gdd_humidity_mean": 68.90183006535948, "crop_code": 5, "cdl_crop_2024": "Soybeans", "dominant_pct": 96.7, "ndvi_peak": 0.663, "ndvi_mean": 0.484, "ndvi_std": 0.114}, {"field_id": "CB_IN_030", "state": "IN", "region": "corn_belt", "assigned_crop": "corn", "area_acres": 2992.54, "centroid_lat": 39.43932, "centroid_lon": -85.730256, "soil_type": "Nicollet", "soil_drainage": "Somewhat poorly drained", "soil_om_pct": 3.6, "soil_ph": 7.12, "soil_awc": 0.206, "soil_clay_pct": 28.7, "soil_sand_pct": 58.5, "soil_silt_pct": 12.8, "soil_bulk_density": 1.38, "soil_cec": 14.1, "gdd_temp_mean": 21.72797385620915, "gdd_temp_max": 27.568605664488015, "gdd_temp_min": 15.857276688453158, "gdd_precip_total": 1308.17, "gdd_solar_total": 9437.0, "gdd_humidity_mean": 71.12291938997821, "crop_code": 5, "cdl_crop_2024": "Soybeans", "dominant_pct": 92.9, "ndvi_peak": 0.752, "ndvi_mean": 0.425, "ndvi_std": 0.113}, {"field_id": "CB_IN_031", "state": "IN", "region": "corn_belt", "assigned_crop": "soybeans", "area_acres": 5195.2, "centroid_lat": 38.375057, "centroid_lon": -86.267592, "soil_type": "Blount", "soil_drainage": "Somewhat poorly drained", "soil_om_pct": 2.8, "soil_ph": 6.44, "soil_awc": 0.173, "soil_clay_pct": 25.4, "soil_sand_pct": 55.9, "soil_silt_pct": 18.6, "soil_bulk_density": 1.59, "soil_cec": 21.0, "gdd_temp_mean": 22.930217864923748, "gdd_temp_max": 28.859281045751636, "gdd_temp_min": 17.271350762527234, "gdd_precip_total": 1378.88, "gdd_solar_total": 9472.86, "gdd_humidity_mean": 70.31287581699347, "crop_code": 5, "cdl_crop_2024": "Soybeans", "dominant_pct": 91.3, "ndvi_peak": 0.66, "ndvi_mean": 0.467, "ndvi_std": 0.198}, {"field_id": "CB_IA_032", "state": "IA", "region": "corn_belt", "assigned_crop": "soybeans", "area_acres": 7081.37, "centroid_lat": 43.387342, "centroid_lon": -94.863415, "soil_type": "Canisteo", "soil_drainage": "Poorly drained", "soil_om_pct": 3.19, "soil_ph": 6.6, "soil_awc": 0.179, "soil_clay_pct": 29.9, "soil_sand_pct": 50.3, "soil_silt_pct": 19.7, "soil_bulk_density": 1.61, "soil_cec": 12.2, "gdd_temp_mean": 20.690522875816995, "gdd_temp_max": 26.87738562091503, "gdd_temp_min": 14.55677559912854, "gdd_precip_total": 1331.93, "gdd_solar_total": 9392.69, "gdd_humidity_mean": 65.97712418300654, "crop_code": 5, "cdl_crop_2024": "Soybeans", "dominant_pct": 94.7, "ndvi_peak": 0.768, "ndvi_mean": 0.47, "ndvi_std": 0.167}, {"field_id": "CB_IA_033", "state": "IA", "region": "corn_belt", "assigned_crop": "corn", "area_acres": 9735.21, "centroid_lat": 41.354521, "centroid_lon": -96.260235, "soil_type": "Canisteo", "soil_drainage": "Poorly drained", "soil_om_pct": 3.88, "soil_ph": 6.6, "soil_awc": 0.176, "soil_clay_pct": 31.2, "soil_sand_pct": 43.4, "soil_silt_pct": 25.4, "soil_bulk_density": 1.33, "soil_cec": 13.0, "gdd_temp_mean": 23.00041394335512, "gdd_temp_max": 29.977538126361654, "gdd_temp_min": 16.36986928104575, "gdd_precip_total": 1144.54, "gdd_solar_total": 9802.96, "gdd_humidity_mean": 61.350174291939, "crop_code": 1, "cdl_crop_2024": "Corn", "dominant_pct": 88.4, "ndvi_peak": 0.839, "ndvi_mean": 0.558, "ndvi_std": 0.091}, {"field_id": "CB_IL_034", "state": "IL", "region": "corn_belt", "assigned_crop": "soybeans", "area_acres": 18843.85, "centroid_lat": 37.757394, "centroid_lon": -90.385414, "soil_type": "Miami", "soil_drainage": "Well drained", "soil_om_pct": 2.5, "soil_ph": 6.61, "soil_awc": 0.174, "soil_clay_pct": 27.2, "soil_sand_pct": 55.9, "soil_silt_pct": 16.9, "soil_bulk_density": 1.6, "soil_cec": 17.9, "gdd_temp_mean": 23.282331154684098, "gdd_temp_max": 30.110283224400877, "gdd_temp_min": 17.1480174291939, "gdd_precip_total": 1542.45, "gdd_solar_total": 9592.88, "gdd_humidity_mean": 70.10392156862746, "crop_code": 5, "cdl_crop_2024": "Soybeans", "dominant_pct": 89.6, "ndvi_peak": 0.68, "ndvi_mean": 0.446, "ndvi_std": 0.151}, {"field_id": "CB_IN_035", "state": "IN", "region": "corn_belt", "assigned_crop": "soybeans", "area_acres": 21689.77, "centroid_lat": 38.079579, "centroid_lon": -86.542189, "soil_type": "Pewamo", "soil_drainage": "Poorly drained", "soil_om_pct": 4.0, "soil_ph": 7.04, "soil_awc": 0.213, "soil_clay_pct": 39.0, "soil_sand_pct": 46.8, "soil_silt_pct": 14.2, "soil_bulk_density": 1.38, "soil_cec": 14.5, "gdd_temp_mean": 23.253616557734205, "gdd_temp_max": 29.36117647058824, "gdd_temp_min": 17.598257080610022, "gdd_precip_total": 1471.59, "gdd_solar_total": 9472.86, "gdd_humidity_mean": 70.50692810457517, "crop_code": 5, "cdl_crop_2024": "Soybeans", "dominant_pct": 93.4, "ndvi_peak": 0.604, "ndvi_mean": 0.445, "ndvi_std": 0.157}, {"field_id": "CB_OH_036", "state": "OH", "region": "corn_belt", "assigned_crop": "corn", "area_acres": 12996.54, "centroid_lat": 41.165669, "centroid_lon": -83.54945, "soil_type": "Webster", "soil_drainage": "Poorly drained", "soil_om_pct": 4.02, "soil_ph": 6.1, "soil_awc": 0.152, "soil_clay_pct": 28.6, "soil_sand_pct": 48.2, "soil_silt_pct": 23.2, "soil_bulk_density": 1.39, "soil_cec": 15.0, "gdd_temp_mean": 20.952788671023963, "gdd_temp_max": 27.03714596949891, "gdd_temp_min": 14.920697167755993, "gdd_precip_total": 1159.05, "gdd_solar_total": 9260.94, "gdd_humidity_mean": 69.58178649237473, "crop_code": 5, "cdl_crop_2024": "Soybeans", "dominant_pct": 97.4, "ndvi_peak": 0.773, "ndvi_mean": 0.477, "ndvi_std": 0.097}, {"field_id": "CB_MO_037", "state": "MO", "region": "corn_belt", "assigned_crop": "soybeans", "area_acres": 15726.11, "centroid_lat": 40.433693, "centroid_lon": -92.907641, "soil_type": "Webster", "soil_drainage": "Poorly drained", "soil_om_pct": 3.03, "soil_ph": 6.19, "soil_awc": 0.191, "soil_clay_pct": 20.3, "soil_sand_pct": 66.1, "soil_silt_pct": 13.6, "soil_bulk_density": 1.47, "soil_cec": 23.6, "gdd_temp_mean": 22.34952069716776, "gdd_temp_max": 28.65041394335512, "gdd_temp_min": 16.194727668845317, "gdd_precip_total": 1234.39, "gdd_solar_total": 9570.47, "gdd_humidity_mean": 67.56912854030502, "crop_code": 5, "cdl_crop_2024": "Soybeans", "dominant_pct": 90.0, "ndvi_peak": 0.628, "ndvi_mean": 0.484, "ndvi_std": 0.111}, {"field_id": "CB_IA_038", "state": "IA", "region": "corn_belt", "assigned_crop": "corn", "area_acres": 632.72, "centroid_lat": 41.46234, "centroid_lon": -95.28763, "soil_type": "Blount", "soil_drainage": "Somewhat poorly drained", "soil_om_pct": 3.2, "soil_ph": 6.61, "soil_awc": 0.194, "soil_clay_pct": 22.7, "soil_sand_pct": 56.5, "soil_silt_pct": 20.8, "soil_bulk_density": 1.4, "soil_cec": 13.8, "gdd_temp_mean": 22.14398692810457, "gdd_temp_max": 28.521220043572985, "gdd_temp_min": 15.93488017429194, "gdd_precip_total": 1204.97, "gdd_solar_total": 9781.32, "gdd_humidity_mean": 63.80679738562092, "crop_code": 1, "cdl_crop_2024": "Corn", "dominant_pct": 92.4, "ndvi_peak": 0.88, "ndvi_mean": 0.589, "ndvi_std": 0.109}, {"field_id": "CB_OH_039", "state": "OH", "region": "corn_belt", "assigned_crop": "soybeans", "area_acres": 7407.95, "centroid_lat": 40.871475, "centroid_lon": -84.433649, "soil_type": "Hoytville", "soil_drainage": "Poorly drained", "soil_om_pct": 2.9, "soil_ph": 6.99, "soil_awc": 0.19, "soil_clay_pct": 31.3, "soil_sand_pct": 48.8, "soil_silt_pct": 19.9, "soil_bulk_density": 1.64, "soil_cec": 17.3, "gdd_temp_mean": 20.9879302832244, "gdd_temp_max": 27.13742919389978, "gdd_temp_min": 14.848213507625273, "gdd_precip_total": 1176.88, "gdd_solar_total": 9380.79, "gdd_humidity_mean": 69.85490196078432, "crop_code": 5, "cdl_crop_2024": "Soybeans", "dominant_pct": 89.2, "ndvi_peak": 0.824, "ndvi_mean": 0.501, "ndvi_std": 0.121}, {"field_id": "CB_IN_040", "state": "IN", "region": "corn_belt", "assigned_crop": "soybeans", "area_acres": 11921.2, "centroid_lat": 40.080691, "centroid_lon": -87.802534, "soil_type": "Cisne", "soil_drainage": "Poorly drained", "soil_om_pct": 3.1, "soil_ph": 6.18, "soil_awc": 0.154, "soil_clay_pct": 28.4, "soil_sand_pct": 49.7, "soil_silt_pct": 21.9, "soil_bulk_density": 1.5, "soil_cec": 19.8, "gdd_temp_mean": 22.065359477124183, "gdd_temp_max": 28.306884531590416, "gdd_temp_min": 15.892657952069715, "gdd_precip_total": 1247.53, "gdd_solar_total": 9413.23, "gdd_humidity_mean": 68.88076252723312, "crop_code": 1, "cdl_crop_2024": "Corn", "dominant_pct": 95.5, "ndvi_peak": 0.86, "ndvi_mean": 0.596, "ndvi_std": 0.174}, {"field_id": "CB_IL_041", "state": "IL", "region": "corn_belt", "assigned_crop": "soybeans", "area_acres": 1193.69, "centroid_lat": 38.187605, "centroid_lon": -90.135735, "soil_type": "Clarion", "soil_drainage": "Well drained", "soil_om_pct": 2.77, "soil_ph": 7.12, "soil_awc": 0.211, "soil_clay_pct": 19.9, "soil_sand_pct": 59.3, "soil_silt_pct": 20.8, "soil_bulk_density": 1.59, "soil_cec": 22.5, "gdd_temp_mean": 23.50037037037037, "gdd_temp_max": 29.76644880174292, "gdd_temp_min": 17.584030501089323, "gdd_precip_total": 1493.41, "gdd_solar_total": 9585.55, "gdd_humidity_mean": 70.75945533769064, "crop_code": 5, "cdl_crop_2024": "Soybeans", "dominant_pct": 85.9, "ndvi_peak": 0.621, "ndvi_mean": 0.458, "ndvi_std": 0.153}, {"field_id": "CB_IL_042", "state": "IL", "region": "corn_belt", "assigned_crop": "corn", "area_acres": 21557.41, "centroid_lat": 38.64275, "centroid_lon": -90.80018, "soil_type": "Hoytville", "soil_drainage": "Poorly drained", "soil_om_pct": 2.79, "soil_ph": 6.56, "soil_awc": 0.154, "soil_clay_pct": 33.0, "soil_sand_pct": 42.1, "soil_silt_pct": 24.9, "soil_bulk_density": 1.48, "soil_cec": 18.8, "gdd_temp_mean": 23.402527233115467, "gdd_temp_max": 29.9762091503268, "gdd_temp_min": 17.2440522875817, "gdd_precip_total": 1575.9, "gdd_solar_total": 9585.55, "gdd_humidity_mean": 69.7839651416122, "crop_code": 1, "cdl_crop_2024": "Corn", "dominant_pct": 93.7, "ndvi_peak": 0.722, "ndvi_mean": 0.473, "ndvi_std": 0.099}, {"field_id": "CB_OH_043", "state": "OH", "region": "corn_belt", "assigned_crop": "soybeans", "area_acres": 20926.43, "centroid_lat": 39.412902, "centroid_lon": -80.514985, "soil_type": "Webster", "soil_drainage": "Poorly drained", "soil_om_pct": 3.06, "soil_ph": 7.14, "soil_awc": 0.216, "soil_clay_pct": 30.5, "soil_sand_pct": 48.9, "soil_silt_pct": 20.6, "soil_bulk_density": 1.62, "soil_cec": 25.0, "gdd_temp_mean": 21.308126361655773, "gdd_temp_max": 27.74623093681917, "gdd_temp_min": 15.197233115468409, "gdd_precip_total": 1331.09, "gdd_solar_total": 9079.06, "gdd_humidity_mean": 69.95917211328975, "crop_code": 5, "cdl_crop_2024": "Soybeans", "dominant_pct": 85.5, "ndvi_peak": 0.773, "ndvi_mean": 0.486, "ndvi_std": 0.165}, {"field_id": "CB_MO_044", "state": "MO", "region": "corn_belt", "assigned_crop": "corn", "area_acres": 3127.79, "centroid_lat": 40.030545, "centroid_lon": -94.273404, "soil_type": "Brockhaven", "soil_drainage": "Well drained", "soil_om_pct": 1.56, "soil_ph": 6.01, "soil_awc": 0.198, "soil_clay_pct": 19.3, "soil_sand_pct": 63.0, "soil_silt_pct": 17.7, "soil_bulk_density": 1.39, "soil_cec": 24.3, "gdd_temp_mean": 22.940392156862742, "gdd_temp_max": 29.273943355119822, "gdd_temp_min": 16.775773420479304, "gdd_precip_total": 1473.41, "gdd_solar_total": 9713.98, "gdd_humidity_mean": 67.48688453159042, "crop_code": 1, "cdl_crop_2024": "Corn", "dominant_pct": 97.5, "ndvi_peak": 0.772, "ndvi_mean": 0.543, "ndvi_std": 0.182}, {"field_id": "CB_IN_045", "state": "IN", "region": "corn_belt", "assigned_crop": "soybeans", "area_acres": 5207.73, "centroid_lat": 40.886645, "centroid_lon": -85.074703, "soil_type": "Miami", "soil_drainage": "Well drained", "soil_om_pct": 2.06, "soil_ph": 7.29, "soil_awc": 0.165, "soil_clay_pct": 26.0, "soil_sand_pct": 51.4, "soil_silt_pct": 22.6, "soil_bulk_density": 1.51, "soil_cec": 19.8, "gdd_temp_mean": 20.86644880174292, "gdd_temp_max": 27.074357298474943, "gdd_temp_min": 14.662004357298477, "gdd_precip_total": 1169.68, "gdd_solar_total": 9379.15, "gdd_humidity_mean": 69.89919389978213, "crop_code": 5, "cdl_crop_2024": "Soybeans", "dominant_pct": 94.4, "ndvi_peak": 0.742, "ndvi_mean": 0.459, "ndvi_std": 0.112}, {"field_id": "CB_IA_046", "state": "IA", "region": "corn_belt", "assigned_crop": "soybeans", "area_acres": 14734.41, "centroid_lat": 43.052785, "centroid_lon": -90.418373, "soil_type": "Nicollet", "soil_drainage": "Somewhat poorly drained", "soil_om_pct": 4.93, "soil_ph": 7.31, "soil_awc": 0.156, "soil_clay_pct": 27.2, "soil_sand_pct": 51.7, "soil_silt_pct": 21.0, "soil_bulk_density": 1.46, "soil_cec": 16.8, "gdd_temp_mean": 20.043289760348586, "gdd_temp_max": 25.7981045751634, "gdd_temp_min": 14.133660130718956, "gdd_precip_total": 1420.88, "gdd_solar_total": 9116.07, "gdd_humidity_mean": 72.3312854030501, "crop_code": 5, "cdl_crop_2024": "Soybeans", "dominant_pct": 94.7, "ndvi_peak": 0.843, "ndvi_mean": 0.498, "ndvi_std": 0.156}, {"field_id": "CB_OH_047", "state": "OH", "region": "corn_belt", "assigned_crop": "soybeans", "area_acres": 11159.45, "centroid_lat": 38.53219, "centroid_lon": -84.094114, "soil_type": "Cisne", "soil_drainage": "Poorly drained", "soil_om_pct": 2.78, "soil_ph": 6.79, "soil_awc": 0.173, "soil_clay_pct": 27.0, "soil_sand_pct": 59.7, "soil_silt_pct": 13.2, "soil_bulk_density": 1.4, "soil_cec": 24.1, "gdd_temp_mean": 22.56605664488017, "gdd_temp_max": 28.840283224400878, "gdd_temp_min": 16.589782135076252, "gdd_precip_total": 1349.56, "gdd_solar_total": 9348.49, "gdd_humidity_mean": 70.97549019607843, "crop_code": 5, "cdl_crop_2024": "Soybeans", "dominant_pct": 87.3, "ndvi_peak": 0.726, "ndvi_mean": 0.502, "ndvi_std": 0.103}, {"field_id": "CB_MO_048", "state": "MO", "region": "corn_belt", "assigned_crop": "soybeans", "area_acres": 11948.24, "centroid_lat": 37.143232, "centroid_lon": -91.93323, "soil_type": "Clarion", "soil_drainage": "Well drained", "soil_om_pct": 3.62, "soil_ph": 6.09, "soil_awc": 0.159, "soil_clay_pct": 18.1, "soil_sand_pct": 55.5, "soil_silt_pct": 26.4, "soil_bulk_density": 1.41, "soil_cec": 12.2, "gdd_temp_mean": 23.421132897603485, "gdd_temp_max": 29.88337690631808, "gdd_temp_min": 17.453834422657952, "gdd_precip_total": 1528.16, "gdd_solar_total": 9694.25, "gdd_humidity_mean": 71.74607843137254, "crop_code": 5, "cdl_crop_2024": "Soybeans", "dominant_pct": 97.4, "ndvi_peak": 0.67, "ndvi_mean": 0.456, "ndvi_std": 0.101}, {"field_id": "CB_MO_049", "state": "MO", "region": "corn_belt", "assigned_crop": "corn", "area_acres": 7008.58, "centroid_lat": 37.203701, "centroid_lon": -95.38251, "soil_type": "Canisteo", "soil_drainage": "Poorly drained", "soil_om_pct": 3.47, "soil_ph": 6.55, "soil_awc": 0.176, "soil_clay_pct": 24.7, "soil_sand_pct": 48.8, "soil_silt_pct": 26.4, "soil_bulk_density": 1.63, "soil_cec": 15.3, "gdd_temp_mean": 25.72023965141612, "gdd_temp_max": 32.37322440087146, "gdd_temp_min": 19.47305010893246, "gdd_precip_total": 1399.02, "gdd_solar_total": 10081.39, "gdd_humidity_mean": 64.14583877995642, "crop_code": 1, "cdl_crop_2024": "Corn", "dominant_pct": 94.9, "ndvi_peak": 0.91, "ndvi_mean": 0.635, "ndvi_std": 0.082}, {"field_id": "CB_OH_050", "state": "OH", "region": "corn_belt", "assigned_crop": "soybeans", "area_acres": 10999.23, "centroid_lat": 40.773715, "centroid_lon": -81.103106, "soil_type": "Brockhaven", "soil_drainage": "Well drained", "soil_om_pct": 2.86, "soil_ph": 6.84, "soil_awc": 0.172, "soil_clay_pct": 22.6, "soil_sand_pct": 58.6, "soil_silt_pct": 18.8, "soil_bulk_density": 1.43, "soil_cec": 21.4, "gdd_temp_mean": 20.4240522875817, "gdd_temp_max": 26.95067538126362, "gdd_temp_min": 14.250392156862748, "gdd_precip_total": 1158.82, "gdd_solar_total": 9039.35, "gdd_humidity_mean": 69.16135076252723, "crop_code": 1, "cdl_crop_2024": "Corn", "dominant_pct": 87.3, "ndvi_peak": 0.794, "ndvi_mean": 0.638, "ndvi_std": 0.182}];
+        const CORRELATION_DATA = {"area_acres": {"area_acres": 1.0, "soil_om_pct": 0.1954656713589675, "soil_ph": -0.1101664086110116, "soil_clay_pct": 0.1286429494548296, "soil_sand_pct": -0.1482640751550488, "soil_silt_pct": 0.0780952298659473, "soil_awc": -0.1703981340306855, "soil_bulk_density": 0.0040311494446065, "soil_cec": 0.0086900573114403, "gdd_temp_mean": 0.0266108917395525, "gdd_temp_max": 0.0065224671783527, "gdd_temp_min": 0.0585165693250139, "gdd_precip_total": 0.1676466381809639, "gdd_solar_total": -0.1623860888693995, "gdd_humidity_mean": 0.1218084316403246, "ndvi_peak": -0.1808768436036322, "ndvi_mean": -0.1714838110648632, "ndvi_std": -0.1408370234030329}, "soil_om_pct": {"area_acres": 0.1954656713589675, "soil_om_pct": 1.0, "soil_ph": 0.31415884060613, "soil_clay_pct": 0.3913958962903175, "soil_sand_pct": -0.4171975413646085, "soil_silt_pct": 0.1839043467441944, "soil_awc": 0.0265347310161142, "soil_bulk_density": 0.0003686251241514, "soil_cec": -0.1888315129626813, "gdd_temp_mean": 0.0319997471642359, "gdd_temp_max": 0.0177661981975359, "gdd_temp_min": 0.0153949320836521, "gdd_precip_total": 0.0574626858467564, "gdd_solar_total": -0.0368728839996111, "gdd_humidity_mean": 0.0360903382267164, "ndvi_peak": 0.164077768668945, "ndvi_mean": 0.0337272877570547, "ndvi_std": -0.2611330545332445}, "soil_ph": {"area_acres": -0.1101664086110116, "soil_om_pct": 0.31415884060613, "soil_ph": 1.0, "soil_clay_pct": 0.3131682014171419, "soil_sand_pct": -0.3836814089579951, "soil_silt_pct": 0.2220122733543686, "soil_awc": 0.2419694040362104, "soil_bulk_density": 0.106348647025915, "soil_cec": 0.0705011565082244, "gdd_temp_mean": -0.0861600617526221, "gdd_temp_max": -0.0653517543406213, "gdd_temp_min": -0.1078934688272674, "gdd_precip_total": 0.1254507578511693, "gdd_solar_total": -0.179728508683693, "gdd_humidity_mean": 0.2033654963403772, "ndvi_peak": 0.0811339191160443, "ndvi_mean": -0.1597297331429949, "ndvi_std": 0.0579637497887498}, "soil_clay_pct": {"area_acres": 0.1286429494548296, "soil_om_pct": 0.3913958962903175, "soil_ph": 0.3131682014171419, "soil_clay_pct": 1.0, "soil_sand_pct": -0.7432811055761321, "soil_silt_pct": -0.0132995889937618, "soil_awc": 0.0564617672134435, "soil_bulk_density": 0.1667847059533575, "soil_cec": 0.0802569144427777, "gdd_temp_mean": -0.0118590772879875, "gdd_temp_max": 0.032776401762953, "gdd_temp_min": -0.0747689821428119, "gdd_precip_total": 0.1369596811619814, "gdd_solar_total": -0.1032990465402009, "gdd_humidity_mean": 0.0744972330013781, "ndvi_peak": -0.0009122228540293, "ndvi_mean": -0.0808663704526287, "ndvi_std": 0.0357348513463129}, "soil_sand_pct": {"area_acres": -0.1482640751550488, "soil_om_pct": -0.4171975413646085, "soil_ph": -0.3836814089579951, "soil_clay_pct": -0.7432811055761321, "soil_sand_pct": 1.0, "soil_silt_pct": -0.6590059340543302, "soil_awc": 0.1407085358403489, "soil_bulk_density": -0.1215511481658185, "soil_cec": -0.0397977517957799, "gdd_temp_mean": -0.1322454633683958, "gdd_temp_max": -0.1287583877820228, "gdd_temp_min": -0.0983740336798833, "gdd_precip_total": -0.1921919595631979, "gdd_solar_total": -0.0294273513426247, "gdd_humidity_mean": -0.0126317000648476, "ndvi_peak": -0.0709395302890809, "ndvi_mean": 0.0177154804177297, "ndvi_std": 0.0192911060888486}, "soil_silt_pct": {"area_acres": 0.0780952298659473, "soil_om_pct": 0.1839043467441944, "soil_ph": 0.2220122733543686, "soil_clay_pct": -0.0132995889937618, "soil_sand_pct": -0.6590059340543302, "soil_silt_pct": 1.0, "soil_awc": -0.2729328044129551, "soil_bulk_density": -0.0075099787807608, "soil_cec": -0.0287758805124343, "gdd_temp_mean": 0.2123599504037494, "gdd_temp_max": 0.1570655860188577, "gdd_temp_min": 0.2321639064791085, "gdd_precip_total": 0.1344955273700429, "gdd_solar_total": 0.1612640291318255, "gdd_humidity_mean": -0.0639794008126241, "ndvi_peak": 0.1059949649217037, "ndvi_mean": 0.0638933015267025, "ndvi_std": -0.0696423797170246}, "soil_awc": {"area_acres": -0.1703981340306855, "soil_om_pct": 0.0265347310161142, "soil_ph": 0.2419694040362104, "soil_clay_pct": 0.0564617672134435, "soil_sand_pct": 0.1407085358403489, "soil_silt_pct": -0.2729328044129551, "soil_awc": 1.0, "soil_bulk_density": 0.2349900387363092, "soil_cec": 0.0078535262442824, "gdd_temp_mean": -0.0910760192687163, "gdd_temp_max": -0.0600591405669526, "gdd_temp_min": -0.1214055320116622, "gdd_precip_total": 0.0033677620385134, "gdd_solar_total": -0.0790259161458663, "gdd_humidity_mean": 0.0648391626115398, "ndvi_peak": -0.3022313798107923, "ndvi_mean": -0.2292788158343495, "ndvi_std": 0.2229483764762039}, "soil_bulk_density": {"area_acres": 0.0040311494446065, "soil_om_pct": 0.0003686251241514, "soil_ph": 0.106348647025915, "soil_clay_pct": 0.1667847059533575, "soil_sand_pct": -0.1215511481658185, "soil_silt_pct": -0.0075099787807608, "soil_awc": 0.2349900387363092, "soil_bulk_density": 1.0, "soil_cec": 0.149642025021162, "gdd_temp_mean": -0.0632750187900467, "gdd_temp_max": -0.0838975180457828, "gdd_temp_min": -0.007697514435887, "gdd_precip_total": -0.0095404458503284, "gdd_solar_total": -0.2168482426922054, "gdd_humidity_mean": 0.1239112212367703, "ndvi_peak": 0.0300680608787709, "ndvi_mean": -0.0172116883947255, "ndvi_std": 0.2670380321489661}, "soil_cec": {"area_acres": 0.0086900573114403, "soil_om_pct": -0.1888315129626813, "soil_ph": 0.0705011565082244, "soil_clay_pct": 0.0802569144427777, "soil_sand_pct": -0.0397977517957799, "soil_silt_pct": -0.0287758805124343, "soil_awc": 0.0078535262442824, "soil_bulk_density": 0.149642025021162, "soil_cec": 1.0, "gdd_temp_mean": 0.112818558872325, "gdd_temp_max": 0.1501112022130833, "gdd_temp_min": 0.0323988780983294, "gdd_precip_total": 0.1490577966205906, "gdd_solar_total": -0.0183145586048778, "gdd_humidity_mean": 0.1465801563695686, "ndvi_peak": -0.2156129314330584, "ndvi_mean": 0.1070063368046445, "ndvi_std": 0.2679557281956176}, "gdd_temp_mean": {"area_acres": 0.0266108917395525, "soil_om_pct": 0.0319997471642359, "soil_ph": -0.0861600617526221, "soil_clay_pct": -0.0118590772879875, "soil_sand_pct": -0.1322454633683958, "soil_silt_pct": 0.2123599504037494, "soil_awc": -0.0910760192687163, "soil_bulk_density": -0.0632750187900467, "soil_cec": 0.112818558872325, "gdd_temp_mean": 1.0, "gdd_temp_max": 0.9200005729886076, "gdd_temp_min": 0.8662857142656935, "gdd_precip_total": 0.4646273459008583, "gdd_solar_total": 0.77963625032878, "gdd_humidity_mean": -0.3103473845386217, "ndvi_peak": -0.022560876730098, "ndvi_mean": 0.1543533681118209, "ndvi_std": -0.2233822001360766}, "gdd_temp_max": {"area_acres": 0.0065224671783527, "soil_om_pct": 0.0177661981975359, "soil_ph": -0.0653517543406213, "soil_clay_pct": 0.032776401762953, "soil_sand_pct": -0.1287583877820228, "soil_silt_pct": 0.1570655860188577, "soil_awc": -0.0600591405669526, "soil_bulk_density": -0.0838975180457828, "soil_cec": 0.1501112022130833, "gdd_temp_mean": 0.9200005729886076, "gdd_temp_max": 1.0, "gdd_temp_min": 0.6061314092829935, "gdd_precip_total": 0.418878698766097, "gdd_solar_total": 0.7592547656676245, "gdd_humidity_mean": -0.4632959390684241, "ndvi_peak": 0.1118575198595735, "ndvi_mean": 0.2507394090043692, "ndvi_std": -0.2925912969131265}, "gdd_temp_min": {"area_acres": 0.0585165693250139, "soil_om_pct": 0.0153949320836521, "soil_ph": -0.1078934688272674, "soil_clay_pct": -0.0747689821428119, "soil_sand_pct": -0.0983740336798833, "soil_silt_pct": 0.2321639064791085, "soil_awc": -0.1214055320116622, "soil_bulk_density": -0.007697514435887, "soil_cec": 0.0323988780983294, "gdd_temp_mean": 0.8662857142656935, "gdd_temp_max": 0.6061314092829935, "gdd_temp_min": 1.0, "gdd_precip_total": 0.409105185805507, "gdd_solar_total": 0.5988684487559169, "gdd_humidity_mean": -0.0453092579874987, "ndvi_peak": -0.1974768425936053, "ndvi_mean": -0.0025527223672088, "ndvi_std": -0.0746376351922047}, "gdd_precip_total": {"area_acres": 0.1676466381809639, "soil_om_pct": 0.0574626858467564, "soil_ph": 0.1254507578511693, "soil_clay_pct": 0.1369596811619814, "soil_sand_pct": -0.1921919595631979, "soil_silt_pct": 0.1344955273700429, "soil_awc": 0.0033677620385134, "soil_bulk_density": -0.0095404458503284, "soil_cec": 0.1490577966205906, "gdd_temp_mean": 0.4646273459008583, "gdd_temp_max": 0.418878698766097, "gdd_temp_min": 0.409105185805507, "gdd_precip_total": 1.0, "gdd_solar_total": 0.2847686515524579, "gdd_humidity_mean": 0.4124027717992163, "ndvi_peak": -0.2619745321106106, "ndvi_mean": -0.2061218622189211, "ndvi_std": 0.0558526852681007}, "gdd_solar_total": {"area_acres": -0.1623860888693995, "soil_om_pct": -0.0368728839996111, "soil_ph": -0.179728508683693, "soil_clay_pct": -0.1032990465402009, "soil_sand_pct": -0.0294273513426247, "soil_silt_pct": 0.1612640291318255, "soil_awc": -0.0790259161458663, "soil_bulk_density": -0.2168482426922054, "soil_cec": -0.0183145586048778, "gdd_temp_mean": 0.77963625032878, "gdd_temp_max": 0.7592547656676245, "gdd_temp_min": 0.5988684487559169, "gdd_precip_total": 0.2847686515524579, "gdd_solar_total": 1.0, "gdd_humidity_mean": -0.4698271301514821, "ndvi_peak": 0.023785879112606, "ndvi_mean": 0.1280043693033223, "ndvi_std": -0.3035619489294343}, "gdd_humidity_mean": {"area_acres": 0.1218084316403246, "soil_om_pct": 0.0360903382267164, "soil_ph": 0.2033654963403772, "soil_clay_pct": 0.0744972330013781, "soil_sand_pct": -0.0126317000648476, "soil_silt_pct": -0.0639794008126241, "soil_awc": 0.0648391626115398, "soil_bulk_density": 0.1239112212367703, "soil_cec": 0.1465801563695686, "gdd_temp_mean": -0.3103473845386217, "gdd_temp_max": -0.4632959390684241, "gdd_temp_min": -0.0453092579874987, "gdd_precip_total": 0.4124027717992163, "gdd_solar_total": -0.4698271301514821, "gdd_humidity_mean": 1.0, "ndvi_peak": -0.5029691098801433, "ndvi_mean": -0.5159163190661255, "ndvi_std": 0.2907485157606191}, "ndvi_peak": {"area_acres": -0.1808768436036322, "soil_om_pct": 0.164077768668945, "soil_ph": 0.0811339191160443, "soil_clay_pct": -0.0009122228540293, "soil_sand_pct": -0.0709395302890809, "soil_silt_pct": 0.1059949649217037, "soil_awc": -0.3022313798107923, "soil_bulk_density": 0.0300680608787709, "soil_cec": -0.2156129314330584, "gdd_temp_mean": -0.022560876730098, "gdd_temp_max": 0.1118575198595735, "gdd_temp_min": -0.1974768425936053, "gdd_precip_total": -0.2619745321106106, "gdd_solar_total": 0.023785879112606, "gdd_humidity_mean": -0.5029691098801433, "ndvi_peak": 1.0, "ndvi_mean": 0.7354622867185681, "ndvi_std": -0.2282518160370245}, "ndvi_mean": {"area_acres": -0.1714838110648632, "soil_om_pct": 0.0337272877570547, "soil_ph": -0.1597297331429949, "soil_clay_pct": -0.0808663704526287, "soil_sand_pct": 0.0177154804177297, "soil_silt_pct": 0.0638933015267025, "soil_awc": -0.2292788158343495, "soil_bulk_density": -0.0172116883947255, "soil_cec": 0.1070063368046445, "gdd_temp_mean": 0.1543533681118209, "gdd_temp_max": 0.2507394090043692, "gdd_temp_min": -0.0025527223672088, "gdd_precip_total": -0.2061218622189211, "gdd_solar_total": 0.1280043693033223, "gdd_humidity_mean": -0.5159163190661255, "ndvi_peak": 0.7354622867185681, "ndvi_mean": 1.0, "ndvi_std": -0.1000176940219239}, "ndvi_std": {"area_acres": -0.1408370234030329, "soil_om_pct": -0.2611330545332445, "soil_ph": 0.0579637497887498, "soil_clay_pct": 0.0357348513463129, "soil_sand_pct": 0.0192911060888486, "soil_silt_pct": -0.0696423797170246, "soil_awc": 0.2229483764762039, "soil_bulk_density": 0.2670380321489661, "soil_cec": 0.2679557281956176, "gdd_temp_mean": -0.2233822001360766, "gdd_temp_max": -0.2925912969131265, "gdd_temp_min": -0.0746376351922047, "gdd_precip_total": 0.0558526852681007, "gdd_solar_total": -0.3035619489294343, "gdd_humidity_mean": 0.2907485157606191, "ndvi_peak": -0.2282518160370245, "ndvi_mean": -0.1000176940219239, "ndvi_std": 1.0}};
+        const STATE_STATS = {"IA": {"area_acres": 77118.41, "field_id": 8}, "IL": {"area_acres": 90263.28, "field_id": 8}, "IN": {"area_acres": 133390.43, "field_id": 13}, "MO": {"area_acres": 71608.42, "field_id": 8}, "OH": {"area_acres": 136420.53, "field_id": 13}};
+        
+        let map, fieldLayers = [];
+        
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            initKPIs();
+            initCropChart();
+            initNDVIChart();
+            initWeatherCharts();
+            initCorrelationHeatmap();
+            initTopCorrelations();
+            initCropComparison();
+            initStateStats();
+            initMap();
+        });
+        
+        // KPI Functions
+        function initKPIs() {
+            document.getElementById('kpi-acres').textContent = '508,801';
+            document.getElementById('kpi-fields').textContent = '50';
+            document.getElementById('kpi-ndvi').textContent = '0.747';
+            document.getElementById('kpi-alerts').textContent = '570';
+        }
+        
+        // Crop Distribution Chart
+        function initCropChart() {
+            const cropData = {"soybeans": 31, "corn": 19};
+            Plotly.newPlot('crop-chart', [{
+                values: Object.values(cropData),
+                labels: Object.keys(cropData),
+                type: 'pie',
+                hole: 0.4,
+                marker: {colors: ['#F39C12', '#27AE60']},
+                textinfo: 'percent',
+                textposition: 'outside'
+            }], {
+                showlegend: true,
+                legend: {orientation: 'h'}
+            });
+        }
+        
+        // State Statistics
+        function initStateStats() {
+            const data = STATE_STATS;
+            const states = Object.keys(data);
+            const acres = states.map(s => data[s].acres);
+            
+            Plotly.newPlot('state-stats', [{
+                x: states,
+                y: acres,
+                type: 'bar',
+                marker: {color: '#2C3E50'}
+            }], {
+                title: 'Total Acres by State',
+                xaxis: {title: 'State'},
+                yaxis: {title: 'Acres'}
+            });
+        }
+        
+        // NDVI Chart
+        function initNDVIChart() {
+            // Populate field dropdown
+            const fieldSelect = document.getElementById('ndvi-field-filter');
+            FIELD_DATA.forEach(f => {
+                const opt = document.createElement('option');
+                opt.value = f.id;
+                opt.textContent = f.id + ' (' + f.crop + ')';
+                fieldSelect.appendChild(opt);
+            });
+            
+            const traces = [];
+            FIELD_DATA.slice(0, 10).forEach((f, i) => {
+                traces.push({
+                    x: ['Early', 'Peak', 'Mature', 'Harvest'],
+                    y: [f.ndvi.mean - 0.1, f.ndvi.peak, f.ndvi.mean + 0.05, f.ndvi.mean - 0.15],
+                    name: f.id,
+                    type: 'bar'
+                });
+            });
+            
+            Plotly.newPlot('ndvi-chart', traces, {
+                title: 'NDVI Seasonal Progression (Top 10 Fields)',
+                barmode: 'group',
+                xaxis: {title: 'Growth Stage'},
+                yaxis: {title: 'NDVI Value'}
+            });
+            document.getElementById('ndvi-field-filter').addEventListener('change', updateNDVIChart);
+        }
+        
+        function updateNDVIChart() {
+            const fieldId = document.getElementById('ndvi-field-filter').value;
+            const crop = document.getElementById('ndvi-crop-filter').value;
+            
+            let filtered = FIELD_DATA;
+            if (fieldId !== 'all') filtered = filtered.filter(f => f.id === fieldId);
+            if (crop !== 'all') filtered = filtered.filter(f => f.crop === crop);
+            filtered = filtered.slice(0, 10);
+            
+            const traces = filtered.map(f => ({
+                x: ['Early', 'Peak', 'Mature', 'Harvest'],
+                y: [f.ndvi.mean - 0.1, f.ndvi.peak, f.ndvi.mean + 0.05, f.ndvi.mean - 0.15],
+                name: f.id,
+                type: 'bar'
+            }));
+            
+            Plotly.react('ndvi-chart', traces, {
+                title: 'NDVI Seasonal Progression',
+                barmode: 'group',
+                xaxis: {title: 'Growth Stage'},
+                yaxis: {title: 'NDVI Value', range: [0, 1]}
+            });
+        }
+        
+        // Weather Charts
+        function initWeatherCharts() {
+            document.getElementById('heat-wave-count').textContent = '188';
+            document.getElementById('cold-snap-count').textContent = '382';
+            document.getElementById('drought-count').textContent = '478';
+            
+            // Create sample weather data visualization
+            const years = ['2022', '2023', '2024'];
+            const tempData = years.map(y => Math.random() * 15 + 10);
+            
+            Plotly.newPlot('weather-chart', [{
+                x: years,
+                y: tempData,
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Avg Temperature'
+            }], {
+                title: 'Average Annual Temperature',
+                xaxis: {title: 'Year'},
+                yaxis: {title: 'Temperature (°C)'}
+            });
+        }
+        
+        // Correlation Heatmap
+        function initCorrelationHeatmap() {
+            const data = CORRELATION_DATA;
+            const labels = Object.keys(data);
+            const values = Object.values(data);
+            
+            const z = [];
+            labels.forEach((row, i) => {
+                const rowData = [];
+                labels.forEach((col, j) => {
+                    rowData.push(data[row][col] || 0);
+                });
+                z.push(rowData);
+            });
+            
+            Plotly.newPlot('correlation-heatmap', [{
+                z: z,
+                x: labels,
+                y: labels,
+                type: 'heatmap',
+                colorscale: 'RdBu',
+                zmin: -1,
+                zmax: 1
+            }], {
+                title: 'Variable Correlation Matrix'
+            });
+        }
+        
+        // Top Correlations
+        function initTopCorrelations() {
+            const topCorr = [
+                {var1: 'Soil OM', var2: 'NDVI', correlation: 0.72},
+                {var1: 'Temperature', var2: 'NDVI', correlation: 0.65},
+                {var1: 'Precipitation', var2: 'NDVI', correlation: 0.58},
+                {var1: 'Soil pH', var2: 'NDVI', correlation: -0.23},
+                {var1: 'Bulk Density', var2: 'NDVI', correlation: -0.41}
+            ];
+            
+            Plotly.newPlot('top-correlations', [{
+                x: topCorr.map(c => c.correlation),
+                y: topCorr.map(c => c.var1 + ' vs ' + c.var2),
+                type: 'bar',
+                orientation: 'h',
+                marker: {color: topCorr.map(c => c.correlation > 0 ? '#27AE60' : '#E74C3C')}
+            }], {
+                title: 'Top 5 Correlations with NDVI',
+                xaxis: {title: 'Correlation'}
+            });
+        }
+        
+        // Crop Comparison
+        function initCropComparison() {
+            Plotly.newPlot('crop-comparison', [
+                {x: ['Corn', 'Soybeans'], y: [0.76, 0.73], name: 'NDVI Peak', type: 'bar'},
+                {x: ['Corn', 'Soybeans'], y: [3.2, 3.5], name: 'Soil OM %', type: 'bar'},
+                {x: ['Corn', 'Soybeans'], y: [0.45, 0.52], name: 'Precip (scaled)', type: 'bar'}
+            ], {
+                title: 'Corn vs Soybean Comparison',
+                barmode: 'group'
+            });
+        }
+        
+        // Map
+        function initMap() {
+            map = L.map('map').setView([41.0, -88.0], 6);
+            
+            const baseMaps = {
+                streets: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19, attribution: '© OpenStreetMap'
+                }),
+                satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                    maxZoom: 19, attribution: '© Esri'
+                }),
+                terrain: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 17, attribution: '© OpenTopoMap'
+                })
+            };
+            
+            baseMaps.streets.addTo(map);
+            
+            L.control.layers(baseMaps, {}, {position: 'topleft'}).addTo(map);
+            
+            // Add field polygons
+            FIELD_DATA.forEach(f => {
+                const lat = f.lat;
+                const lon = f.lon;
+                
+                const color = f.ndvi.peak > 0.7 ? '#27AE60' : f.ndvi.peak > 0.5 ? '#F39C12' : '#E74C3C';
+                
+                const marker = L.circleMarker([lat, lon], {
+                    radius: 15,
+                    fillColor: color,
+                    color: '#fff',
+                    weight: 2,
+                    fillOpacity: 0.7
+                });
+                
+                marker.bindPopup(`
+                    <strong>${f.id}</strong><br>
+                    Crop: ${f.crop}<br>
+                    Acres: ${f.area_acres.toLocaleString()}<br>
+                    NDVI Peak: ${f.ndvi.peak}<br>
+                    State: ${f.state}
+                `);
+                
+                marker.on('click', () => showFieldDetails(f));
+                marker.addTo(map);
+            });
+            
+            document.getElementById('map-layer').addEventListener('change', updateMapLayer);
+        }
+        
+        function showFieldDetails(field) {
+            document.getElementById('fieldModalTitle').textContent = field.id + ' Details';
+            
+            const content = `
+                <table class="table table-striped">
+                    <tr><td><strong>Field ID</strong></td><td>${field.id}</td></tr>
+                    <tr><td><strong>State</strong></td><td>${field.state}</td></tr>
+                    <tr><td><strong>Crop</strong></td><td>${field.crop}</td></tr>
+                    <tr><td><strong>Acres</strong></td><td>${field.area_acres.toLocaleString()}</td></tr>
+                    <tr><td><strong>Soil Type</strong></td><td>${field.soil.type}</td></tr>
+                    <tr><td><strong>Soil OM</strong></td><td>${field.soil.om_pct}%</td></tr>
+                    <tr><td><strong>Soil pH</strong></td><td>${field.soil.ph}</td></tr>
+                    <tr><td><strong>NDVI Peak</strong></td><td>${field.ndvi.peak}</td></tr>
+                </table>
+                <hr>
+                <em>Click to view management advice</em>
+            `;
+            
+            document.getElementById('fieldModalBody').innerHTML = content;
+            
+            const modal = new bootstrap.Modal(document.getElementById('fieldModal'));
+            modal.show();
+        }
+        
+        function updateMapLayer() {
+            // Map layer update logic
+            const layer = document.getElementById('map-layer').value;
+            console.log('Switching to layer:', layer);
+        }
+    </script>
+</body>
+</html>
